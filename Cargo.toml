@@ -1,0 +1,10 @@
+[package]
+name = "flatlined"
+version = "0.1.0"
+authors = ["Jan S."]
+
+[dependencies]
+toml = "0.3.0"
+clap = "2.20.5"
+serde = "0.9.9"
+serde_derive = "0.9.8"
