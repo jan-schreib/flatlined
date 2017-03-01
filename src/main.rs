@@ -19,6 +19,8 @@ use std::process;
 
 static DEFAULT_CONF: &'static str = "/etc/flat.conf";
 static PIDFILE: &'static str = "/var/run/flatlined.pid";
+static FLATUSER: &'static str = "_flatlined";
+static FLATGROUP: &'static str = "_flatlined";
 
 fn uidcheck() -> () {
     if unistd::geteuid() != 0 {
@@ -60,8 +62,8 @@ fn main() {
             .pid_file(PIDFILE)
             .chown_pid_file(false)
             .working_directory("/tmp")
-            .user("_flatlined")
-            .group("_flatlined")
+            .user(FLATUSER)
+            .group(FLATGROUP)
             .privileged_action(|| "Executed before drop privileges");
 
         match daemonize.start() {
@@ -72,3 +74,4 @@ fn main() {
 
     loop {}
 }
+
