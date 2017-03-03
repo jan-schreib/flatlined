@@ -8,9 +8,9 @@ extern crate env_logger;
 extern crate nix;
 extern crate daemonize;
 extern crate clap;
+extern crate ipc;
 
 mod flatconf;
-mod ipc;
 
 use ipc::*;
 use flatconf::FlatConf;
@@ -78,9 +78,18 @@ fn main() {
 
 
     let mut ipc = IPC::new_bind(FLATSOCK);
+
     thread::spawn(move || loop {
-        match ipc.receive_msg() {
-            IPCMsg::Status => println!("Status msg received."),
+        match ipc.receive_msg().unwrap().typ {
+            IPCMsgType::Status => {
+                let mut m = IPCMsg {
+                    typ: IPCMsgType::Ok,
+                    msg: [0u8; 1024],
+                };
+                m.create_payload("foobar");
+                ipc.send_msg(m).unwrap();
+                continue;
+            }
             _ => println!("Unknown msg received."),
         }
     });

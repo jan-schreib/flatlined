@@ -14,6 +14,10 @@ env_logger = "0.4.1"
 nix = "0.7.0"
 nanomsg = "0.6.1"
 
+[lib]
+name = "ipc"
+path = "src/ipc/lib.rs"
+
 [[bin]]
 name = "flatlined"
 path = "src/flatlined/bin/main.rs"
