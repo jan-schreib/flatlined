@@ -10,17 +10,21 @@ extern crate daemonize;
 extern crate clap;
 
 mod flatconf;
+mod ipc;
 
+use ipc::*;
 use flatconf::FlatConf;
 use clap::{Arg, App};
 use daemonize::Daemonize;
 use nix::unistd;
 use std::process;
+use std::{thread, time};
 
 static DEFAULT_CONF: &'static str = "/etc/flat.conf";
 static PIDFILE: &'static str = "/var/run/flatlined.pid";
 static FLATUSER: &'static str = "_flatlined";
 static FLATGROUP: &'static str = "_flatlined";
+static FLATSOCK: &'static str = "ipc:///var/run/flatlined.sock";
 
 fn uidcheck() -> () {
     if unistd::geteuid() != 0 {
@@ -72,6 +76,14 @@ fn main() {
         }
     }
 
-    loop {}
-}
 
+    let mut ipc = IPC::new_bind(FLATSOCK);
+    thread::spawn(move || loop {
+        match ipc.receive_msg() {
+            IPCMsg::Status => println!("Status msg received."),
+            _ => println!("Unknown msg received."),
+        }
+    });
+
+    thread::sleep(time::Duration::from_millis(60000));
+}
