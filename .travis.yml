@@ -1,9 +1,16 @@
 language: rust
 rust:
   - stable
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y libnanomsg-dev
+install:
+  wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz /tmp/1.0.0.tar.gz
+  tar -xvf /tmp/1.0.0.tar.gz
+  cd /tmp/nanomsg-1.0.0
+  mkdir build
+  cd build
+  cmake ..
+  cmake --build .
+  sudo cmake --build . --target install
+  sudo ldconfig
 after_success: |
   sudo apt-get install libcurl4-openssl-dev libelf-dev libdw-dev &&
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
