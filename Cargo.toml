@@ -13,3 +13,11 @@ log = "0.3.6"
 env_logger = "0.4.1"
 nix = "0.7.0"
 nanomsg = "0.6.1"
+
+[[bin]]
+name = "flatlined"
+path = "src/flatlined/bin/main.rs"
+
+[[bin]]
+name = "flatctl"
+path = "src/flatctl/bin/main.rs"
