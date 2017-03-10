@@ -4,6 +4,8 @@ extern crate serde_derive;
 #[macro_use]
 extern crate log;
 
+extern crate blake2_rfc;
+extern crate constant_time_eq;
 extern crate env_logger;
 extern crate nix;
 extern crate daemonize;
@@ -11,6 +13,7 @@ extern crate clap;
 extern crate ipc;
 
 mod flatconf;
+mod beat;
 
 use ipc::*;
 use flatconf::FlatConf;
@@ -19,6 +22,7 @@ use daemonize::Daemonize;
 use nix::unistd;
 use std::process;
 use std::{thread, time};
+use beat::Beat;
 
 static DEFAULT_CONF: &'static str = "/etc/flat.conf";
 static PIDFILE: &'static str = "/var/run/flatlined.pid";
@@ -33,6 +37,24 @@ fn uidcheck() -> () {
     } else {
         return;
     }
+}
+
+fn ipc_handler() -> () {
+    let mut ipc = IPC::new_bind(FLATSOCK);
+    thread::spawn(move || loop {
+        match ipc.receive_msg().unwrap().typ {
+            IPCMsgType::Status => {
+                let mut m = IPCMsg {
+                    typ: IPCMsgType::Ok,
+                    msg: [0u8; 1024],
+                };
+                m.create_payload("foobar");
+                ipc.send_msg(m).unwrap();
+                continue;
+            }
+            _ => println!("Unknown msg received."),
+        }
+    });
 }
 
 fn main() {
@@ -76,23 +98,17 @@ fn main() {
         }
     }
 
+    ipc_handler();
 
-    let mut ipc = IPC::new_bind(FLATSOCK);
+    //determine mode:
+    //client - no servers were defined in the config
+    //server - at least one server was defined in the config
 
-    thread::spawn(move || loop {
-        match ipc.receive_msg().unwrap().typ {
-            IPCMsgType::Status => {
-                let mut m = IPCMsg {
-                    typ: IPCMsgType::Ok,
-                    msg: [0u8; 1024],
-                };
-                m.create_payload("foobar");
-                ipc.send_msg(m).unwrap();
-                continue;
-            }
-            _ => println!("Unknown msg received."),
-        }
-    });
+    if opts.server.len() == 0 {
+        //client mode
+    } else {
+        //server mode
+    }
 
     thread::sleep(time::Duration::from_millis(60000));
 }
