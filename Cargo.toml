@@ -13,6 +13,8 @@ log = "0.3.6"
 env_logger = "0.4.1"
 nix = "0.7.0"
 nanomsg = "0.6.1"
+blake2-rfc = "0.2.17"
+constant_time_eq = "0.1.2"
 
 [lib]
 name = "ipc"
