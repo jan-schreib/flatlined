@@ -8,9 +8,9 @@ use std::process;
 
 #[derive(Debug, Deserialize)]
 pub struct Server {
-    address: String,
-    port: u16,
-    key: String,
+    pub address: String,
+    pub port: u16,
+    pub key: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -20,7 +20,7 @@ pub struct FlatConf {
     socket: String,
     key: String,
     verbose: bool,
-    server: Vec<Server>,
+    pub server: Vec<Server>,
 }
 
 impl FlatConf {
