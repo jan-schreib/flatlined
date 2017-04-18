@@ -8,7 +8,7 @@ extern crate blake2_rfc;
 extern crate constant_time_eq;
 extern crate env_logger;
 extern crate nix;
-extern crate daemonize;
+extern crate daemonizer;
 extern crate clap;
 extern crate ipc;
 
@@ -20,7 +20,7 @@ use ipc::*;
 use socket::{BeatListenSocket, BeatSendSocket};
 use flatconf::FlatConf;
 use clap::{Arg, App};
-use daemonize::Daemonize;
+use daemonizer::Daemonize;
 use nix::unistd;
 use std::process;
 use std::{thread, time};
