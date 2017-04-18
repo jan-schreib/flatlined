@@ -6,16 +6,16 @@ use std::io::prelude::*;
 use std::error::Error;
 use std::process;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Server {
     pub address: String,
     pub port: u16,
     pub key: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct FlatConf {
-    port: u16,
+    pub port: u16,
     logfile: String,
     socket: String,
     key: String,
