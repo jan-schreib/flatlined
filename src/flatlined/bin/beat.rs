@@ -69,6 +69,73 @@ impl Beat {
             hash: hash,
         }
     }
+
+    pub fn from_bytes(data: [u8; 72]) -> Beat {
+        let mut ts = [0u8; 8];
+        let mut cs = [0u8; 64];
+
+        for b in 0..8 {
+            ts[b] = data[b];
+        }
+
+        for bb in 0..64 {
+            cs[bb] = data[bb + 8];
+        }
+
+        let ret = Beat {
+            timestamp: u8arr_to_u64(ts),
+            hash: cs,
+        };
+
+        ret
+    }
+
+    pub fn into_bytes(&self) -> [u8; 72] {
+        let mut ret = [0u8; 72];
+        let ts = u64_to_u8arr(self.timestamp);
+
+        for d in 0..8 {
+            ret[d] = ts[d];
+        }
+        for dd in 0..64 {
+            ret[dd + 8] = self.hash[dd];
+
+        }
+        ret
+    }
+}
+
+#[test]
+fn to_bytes_test() {
+    let msg = Beat::new("foo");
+    let bmsg = msg.into_bytes();
+    let nbmsg = Beat::from_bytes(bmsg);
+    
+    assert!(nbmsg == msg, true);
+}
+
+#[test]
+fn from_bytes_test() {
+    let ts = u64_to_u8arr(u64::max_value());
+    let hs = Beat::create_checksum("foo", &ts);
+    let mut data = [0u8; 72];
+
+    for b in 0..8 {
+        data[b] = ts[b];
+    }
+
+    for bb in 0..64 {
+        data[bb + 8] = hs[bb];
+    }
+
+    let beat = Beat::from_bytes(data);
+    let bbeat = Beat {
+        timestamp: u64::max_value(),
+        hash: Beat::create_checksum("foo", &ts),
+    };
+
+    assert!(beat == bbeat, true);
+
 }
 
 #[test]
