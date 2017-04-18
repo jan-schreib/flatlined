@@ -14,8 +14,10 @@ extern crate ipc;
 
 mod flatconf;
 mod beat;
+mod socket;
 
 use ipc::*;
+use socket::{BeatListenSocket, BeatSendSocket};
 use flatconf::FlatConf;
 use clap::{Arg, App};
 use daemonize::Daemonize;
@@ -51,6 +53,15 @@ fn ipc_handler() -> () {
                 m.create_payload("foobar");
                 ipc.send_msg(m).unwrap();
                 continue;
+            }
+            IPCMsgType::Quit => {
+                let mut m = IPCMsg {
+                    typ: IPCMsgType::Ok,
+                    msg: [0u8; 1024],
+                };
+                m.create_payload("Quitting...");
+                ipc.send_msg(m).unwrap();
+                break;
             }
             _ => println!("Unknown msg received."),
         }
@@ -104,11 +115,28 @@ fn main() {
     //client - no servers were defined in the config
     //server - at least one server was defined in the config
 
+    //thread signal via channels to stop when ipc gets an exit
     if opts.server.len() == 0 {
-        //client mode
+        let socket = BeatListenSocket::new(&opts);
+        thread::spawn(move || loop {
+            match socket.listen() {
+                Ok(_) => println!("Message received and Ok!"),
+                Err(_) => println!("Error!"),
+            }
+        });
     } else {
-        //server mode
+        let send = BeatSendSocket::new(&opts);
+        let recv = BeatListenSocket::new(&opts);
+        thread::spawn(move || loop {
+            match recv.listen() {
+                Ok(_) => println!("Message received and Ok!"),
+                Err(_) => println!("Error!"),
+            }
+        });
+
+        loop {
+            send.send_all();
+        }
     }
 
-    thread::sleep(time::Duration::from_millis(60000));
 }
