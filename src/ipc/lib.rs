@@ -1,4 +1,5 @@
 extern crate nanomsg;
+extern crate quickcheck;
 
 #[macro_use]
 extern crate log;
@@ -26,15 +27,23 @@ pub struct IPCMsg {
     pub msg: [u8; 1024],
 }
 
+pub type IPCMsgPayloadResult = Result<usize, std::string::String>;
+
 impl IPCMsg {
-    pub fn create_payload(&mut self, msg: &str) -> () {
+    pub fn create_payload(&mut self, msg: &str) -> IPCMsgPayloadResult {
         let mut ret = [0u8; 1024];
         let mut i = 0;
-        for c in msg.as_bytes() {
-            ret[i] = *c;
-            i += 1;
+        match msg.is_empty() {
+            true => return Err("Can't send empty message!".to_string()),
+            false => {
+                for c in msg.as_bytes() {
+                    ret[i] = *c;
+                    i += 1;
+                }
+                self.msg = ret;
+                Ok(i)
+            }
         }
-        self.msg = ret;
     }
 }
 
@@ -142,35 +151,81 @@ impl IPC {
     }
 }
 
-#[test]
-fn msg_test() {
-    let mut ipc = IPC::new_bind("ipc:///tmp/ipc-msg-test.ipc");
-    let mut ipc2 = IPC::new_connect("ipc:///tmp/ipc-msg-test.ipc");
-    let mut msg = IPCMsg {
-        typ: IPCMsgType::Status,
-        msg: [0u8; 1024],
-    };
-    msg.create_payload("test payload");
-    ipc2.send_msg(msg).unwrap();
-    let incoming = ipc.receive_msg().unwrap();
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::quickcheck;
 
-    assert_eq!(incoming.typ, IPCMsgType::Status);
-    assert_eq!(std::str::from_utf8(&incoming.msg[..12]).unwrap(),
-               "test payload");
+    #[test]
+    fn msg_test() {
+        let mut ipc = IPC::new_bind("ipc:///tmp/ipc-msg-test.ipc");
+        let mut ipc2 = IPC::new_connect("ipc:///tmp/ipc-msg-test.ipc");
 
-    ipc.shutdown();
-    ipc2.shutdown();
+        let mut msg = IPCMsg {
+            typ: IPCMsgType::Status,
+            msg: [0u8; 1024],
+        };
+        let payload = "test payload";
+        msg.create_payload(payload).unwrap();
+        ipc2.send_msg(msg).unwrap();
+        let incoming = ipc.receive_msg().unwrap();
 
-}
+        assert_eq!(incoming.typ, IPCMsgType::Status);
+        assert_eq!(std::str::from_utf8(&incoming.msg[..payload.len()]).unwrap(),
+                payload);
 
-#[test]
-#[should_panic]
-fn socket_bind_panic_test() {
-    IPC::new_bind("broken");
-}
+        ipc.shutdown();
+        ipc2.shutdown();
 
-#[test]
-#[should_panic]
-fn socket_connect_panic_test() {
-    IPC::new_connect("broken");
+    }
+
+    #[test]
+    fn msg_qc_test() {
+        fn qc(input: Vec<u8>) -> bool {
+            if input.is_empty() {
+                return true;
+            }
+
+            let mut msg = IPCMsg {
+                typ: IPCMsgType::Status,
+                msg: [0u8; 1024],
+            };
+
+            let mut string_input = String::from("");
+            let mut ret = true;
+
+            match String::from_utf8(input) {
+                Ok(v) => string_input = v,
+                Err(_) => ret = false,
+            };
+
+            if !ret {
+                return true;
+            }
+
+            match msg.create_payload(&string_input) {
+                Ok(_) => (),
+                Err(_) => ret = false,
+            };
+
+            if !ret {
+                return true;
+            }
+
+            std::str::from_utf8(&msg.msg[..string_input.len()]).unwrap() == string_input
+        }
+        quickcheck(qc as fn(Vec<u8>) -> bool);
+    }
+
+    #[test]
+    #[should_panic]
+    fn socket_bind_panic_test() {
+        IPC::new_bind("broken");
+    }
+
+    #[test]
+    #[should_panic]
+    fn socket_connect_panic_test() {
+        IPC::new_connect("broken");
+    }
 }
