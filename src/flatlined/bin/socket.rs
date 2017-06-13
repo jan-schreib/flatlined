@@ -5,7 +5,6 @@ use log::*;
 
 pub struct BeatListenSocket {
     socket: UdpSocket,
-    conf: FlatConf,
 }
 
 pub struct BeatSendSocket {
@@ -23,7 +22,6 @@ pub enum BeatError {
 pub type BeatResult = Result<Beat, BeatError>;
 pub type BeatSendResult = Result<(), BeatError>;
 
-
 impl BeatListenSocket {
     fn bind(port: u16) -> UdpSocket {
         match UdpSocket::bind(("127.0.0.1", port)) {
@@ -39,14 +37,13 @@ impl BeatListenSocket {
     pub fn new(conf: &FlatConf) -> BeatListenSocket {
         BeatListenSocket {
             socket: BeatListenSocket::bind(conf.port),
-            conf: conf.clone(),
         }
     }
 
     pub fn listen(&self) -> BeatResult {
         let mut buf = [0; 72];
         match self.socket.recv_from(&mut buf) {
-            Ok((count, src)) => {
+            Ok((count, _)) => {
                 if count == 72 {
                     if log_enabled!(LogLevel::Debug) {
                         debug!("Beat received.");
@@ -58,10 +55,6 @@ impl BeatListenSocket {
             },
             Err(_) => Err(BeatError::ListenError),
         }
-    }
-
-    pub fn close(self) -> () {
-        drop(self.socket);
     }
 }
 
@@ -78,7 +71,7 @@ impl BeatSendSocket {
         for s in k.server.into_iter() {
             match self.send(s.key.clone(), s.address.clone(), s.port) {
                 Ok(_) => (),
-                Err(err) => error!("Send error!"),
+                Err(_) => error!("Send error!"),
             }
         }
     }
@@ -93,9 +86,5 @@ impl BeatSendSocket {
                 },
                 Err(_) => Err(BeatError::SendError),
             }
-    }
-
-    pub fn close(self) -> () {
-        drop(self.socket);
     }
 }

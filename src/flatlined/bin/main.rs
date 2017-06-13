@@ -23,8 +23,7 @@ use clap::{Arg, App};
 use daemonizer::Daemonize;
 use nix::unistd;
 use std::process;
-use std::{thread, time};
-use beat::Beat;
+use std::thread;
 
 static DEFAULT_CONF: &'static str = "/etc/flat.conf";
 static PIDFILE: &'static str = "/var/run/flatlined.pid";
@@ -50,7 +49,7 @@ fn ipc_handler() -> () {
                     typ: IPCMsgType::Ok,
                     msg: [0u8; 1024],
                 };
-                m.create_payload("foobar");
+                m.create_payload("foobar").unwrap();
                 ipc.send_msg(m).unwrap();
                 continue;
             }
@@ -59,7 +58,7 @@ fn ipc_handler() -> () {
                     typ: IPCMsgType::Ok,
                     msg: [0u8; 1024],
                 };
-                m.create_payload("Quitting...");
+                m.create_payload("Quitting...").unwrap();
                 ipc.send_msg(m).unwrap();
                 break;
             }
@@ -134,9 +133,9 @@ fn main() {
             }
         });
 
-        loop {
-            send.send_all();
-        }
+
+        send.send_all();
+
     }
 
 }
