@@ -61,7 +61,7 @@ impl BeatListenSocket {
 impl BeatSendSocket {
     pub fn new(conf: &FlatConf) -> BeatSendSocket {
         BeatSendSocket {
-            socket: UdpSocket::bind("0.0.0.0").unwrap(),
+            socket: UdpSocket::bind(("127.0.0.1", conf.port+1)).unwrap(),
             conf: conf.clone(),
         }
     }
