@@ -14,7 +14,7 @@ pub struct FlatConf {
     socket: String,
     key: String,
     verbose: bool,
-    pub server: Vec<Server>,
+    pub server: Option<Vec<Server>>,
 }
 
 impl FlatConf {

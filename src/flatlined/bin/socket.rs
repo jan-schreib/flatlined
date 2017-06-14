@@ -68,7 +68,7 @@ impl BeatSendSocket {
 
     pub fn send_all(&self) -> () {
         let k = self.conf.clone();
-        for s in k.server.into_iter() {
+        for s in k.server.unwrap().into_iter() {
             match self.send(s.key.clone(), s.address.clone(), s.port) {
                 Ok(_) => (),
                 Err(_) => error!("Send error!"),

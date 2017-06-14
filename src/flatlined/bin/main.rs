@@ -25,6 +25,7 @@ use stats::Statistic;
 use clap::{Arg, App};
 use daemonizer::Daemonize;
 use nix::unistd;
+use server::Server;
 use std::process;
 use std::thread;
 use std::fs;
@@ -71,10 +72,14 @@ fn ipc_handler(stats: Vec<Statistic>) -> () {
                           IPCMsgType::Statistic => {
                               m.typ = IPCMsgType::Statistic;
                               let mut ret: String = String::with_capacity(1024);
-                              for s in &stats {
-                                  ret.push_str(&s.to_string());
+                              if stats.is_empty() {
+                                  m.create_payload("Client mode.").unwrap();
+                              } else {
+                                  for s in &stats {
+                                      ret.push_str(&s.to_string());
+                                  }
+                                  m.create_payload(&ret).unwrap();
                               }
-                              m.create_payload(&ret).unwrap();
                           }
                           IPCMsgType::Quit => {
                               m.typ = IPCMsgType::Quit;
@@ -86,7 +91,7 @@ fn ipc_handler(stats: Vec<Statistic>) -> () {
                           _ => {
                               m.typ = IPCMsgType::Any;
                               m.create_payload("Placeholder").unwrap();
-                          },
+                          }
                       }
                       ipc.send_msg(m).unwrap();
                   });
@@ -117,8 +122,16 @@ fn main() {
         None => opts = FlatConf::parse_file(DEFAULT_CONF.to_owned()),
     }
 
-    let mut stats: Vec<Statistic> = Vec::with_capacity(opts.server.len());
-    for s in &opts.server {
+    let servers: Vec<Server>;
+    let nopts = opts.clone();
+
+    match nopts.server {
+        Some(x) => servers = x.clone(),
+        None => servers = Vec::new(),
+    }
+
+    let mut stats: Vec<Statistic> = Vec::new();
+    for s in &servers {
         stats.push(Statistic::new(s));
     }
 
@@ -144,14 +157,16 @@ fn main() {
     //server - at least one server was defined in the config
 
     //thread signal via channels to stop when ipc gets an exit
-    if opts.server.len() == 0 {
+    if servers.len() == 0 {
         let socket = BeatListenSocket::new(&opts);
         thread::spawn(move || loop {
                           match socket.listen() {
                               Ok(_) => println!("Message received and Ok!"),
                               Err(_) => println!("Error!"),
                           }
+
                       });
+        loop {}
     } else {
         let send = BeatSendSocket::new(&opts);
         let recv = BeatListenSocket::new(&opts);
@@ -164,7 +179,7 @@ fn main() {
                       });
 
         loop {
-            send.send_all();
+            //send.send_all();
         }
     }
 
