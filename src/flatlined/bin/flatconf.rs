@@ -5,13 +5,7 @@ use std::path::Path;
 use std::io::prelude::*;
 use std::error::Error;
 use std::process;
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Server {
-    pub address: String,
-    pub port: u16,
-    pub key: String,
-}
+use server::Server;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct FlatConf {
