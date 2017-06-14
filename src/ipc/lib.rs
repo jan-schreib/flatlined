@@ -31,6 +31,22 @@ pub struct IPCMsg {
 pub type IPCMsgPayloadResult = Result<usize, std::string::String>;
 
 impl IPCMsg {
+    /// Creates the payload for an IPCMsg
+    ///
+    /// # Argument
+    /// * `msg` - String slice that holds the payload
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ipc::*;
+    /// let mut msg = IPCMSG {
+    ///     typ: IPCMsgtype::Ok,
+    ///     msg: [0; 1024],
+    /// };
+    /// msg.create_payload("input").unwrap();
+    /// ```
+    ///
     pub fn create_payload(&mut self, msg: &str) -> IPCMsgPayloadResult {
         let mut ret = [0u8; 1024];
         let mut i = 0;
@@ -70,7 +86,6 @@ impl IPC {
         }
     }
 
-
     fn connect_endpoint(sock: &mut nanomsg::Socket, dest: &str) -> nanomsg::Endpoint {
         match sock.connect(dest) {
             Ok(ep) => ep,
@@ -78,6 +93,16 @@ impl IPC {
         }
     }
 
+    /// Binds a socket and returns the resulting IPC
+    /// # Argument
+    /// * `msg` - String slice that holds path to the socket
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ipc::*;
+    /// let ipc = IPC::new_bind("ipc:///var/run/socket.sock")
+    /// ```
     pub fn new_bind(sock: &str) -> IPC {
         let mut s = IPC::create_socket();
         let e = IPC::bind_endpoint(&mut s, sock);
@@ -86,29 +111,77 @@ impl IPC {
             endpoint: e,
         }
     }
-
+    /// Connects to a socket and returns the resulting IPC
+    /// # Argument
+    /// * `msg` - String slice that holds path to the socket
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ipc::*;
+    /// let ipc = IPC::new_connect("ipc:///var/run/socket.sock")
+    /// ```
     pub fn new_connect(sock: &str) -> IPC {
         let mut s = IPC::create_socket();
         let e = IPC::connect_endpoint(&mut s, sock);
-
         IPC {
             socket: s,
             endpoint: e,
         }
     }
-
+    /// Shuts an IPC connection down.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ipc::*;
+    /// let mut ipc = IPC::new_connect("ipc:///var/run/socket.sock");
+    /// ipc.shutdown();
+    /// ```
     pub fn shutdown(&mut self) -> () {
         self.endpoint.shutdown().unwrap();
     }
-
+    /// Sets the send timeout.
+    ///
+    /// # Argument
+    /// * `time` - Time in milliseconds
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ipc::*;
+    /// let mut ipc = IPC::new_connect("ipc:///var/run/socket.sock");
+    /// ipc.set_send_timeout(2000);
+    /// ```
     pub fn set_send_timeout(&mut self, time: isize) -> () {
         self.socket.set_send_timeout(time).unwrap();
     }
 
+    /// Sets the receive timeout.
+    ///
+    /// # Argument
+    /// * `time` - Time in milliseconds
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ipc::*;
+    /// let mut ipc = IPC::new_connect("ipc:///var/run/socket.sock");
+    /// ipc.set_recv_send_timeout(2000);
+    /// ```
     pub fn set_recv_timeout(&mut self, time: isize) -> () {
         self.socket.set_receive_timeout(time).unwrap();
     }
 
+    /// Receives a message from the IPC socket.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ipc::*;
+    /// let mut ipc = IPC::new_connect("ipc:///var/run/socket.sock");
+    /// let msg = ipc.receive_msg().unwrap();
+    /// ```
     pub fn receive_msg(&mut self) -> IPCRecvResult {
         let mut buffer = [0u8; 1025];
 
@@ -134,7 +207,23 @@ impl IPC {
             Err(err) => Err(err),
         }
     }
-
+    /// Sends a message to the IPC socket.
+    ///
+    /// # Argument
+    /// * `msg` - Message to send
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ipc::*;
+    /// let mut ipc = IPC::new_bind("ipc:///var/run/socket.sock");
+    /// let mut msg = IPCMsg {
+    ///     typ: IPCmsgtype::Ok,
+    ///     msg: [0; 1024],
+    /// };
+    /// msg.create_payload("Content").unwrap();
+    /// let ret = ipc.send_msg(msg).unwrap();
+    /// ```
     pub fn send_msg(&mut self, msg: IPCMsg) -> IPCSendResult {
         let mut buffer = [0u8; 1025];
         buffer[0] = to_val(&msg.typ);
