@@ -52,7 +52,7 @@ fn main() {
         .version("0.1")
         .arg(Arg::with_name("command")
                  .short("c")
-                 .long("config")
+                 .long("command")
                  .value_name("COMMAND")
                  .help("Valid commands: ok (default), status, statistic, quit, any")
                  .takes_value(true))
@@ -86,6 +86,6 @@ fn main() {
         msg: [0; 1024],
     };
 
-    msg.create_payload(matches.value_of("command").unwrap()).unwrap();
+    msg.create_payload(matches.value_of("command").unwrap_or("status")).unwrap();
     communicate(&mut ipc, msg);
 }
