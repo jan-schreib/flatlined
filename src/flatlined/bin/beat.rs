@@ -1,3 +1,5 @@
+extern crate quickcheck;
+
 use std::time::*;
 use blake2_rfc::blake2b::Blake2b;
 use constant_time_eq::constant_time_eq;
@@ -63,7 +65,13 @@ impl Beat {
 
     pub fn new(server_key: &str) -> Beat {
         let time = Beat::create_timestamp();
-        let hash = Beat::create_checksum(server_key, &(u64_to_u8arr(time)));
+        let key = if server_key.is_empty() || server_key.len() >= 64 {
+            ""
+        } else {
+            server_key
+        };
+
+        let hash = Beat::create_checksum(key, &(u64_to_u8arr(time)));
         Beat {
             timestamp: time,
             hash: hash,
@@ -99,75 +107,91 @@ impl Beat {
         }
         for dd in 0..64 {
             ret[dd + 8] = self.hash[dd];
-
         }
         ret
     }
 }
 
-#[test]
-fn to_bytes_test() {
-    let msg = Beat::new("foo");
-    let bmsg = msg.into_bytes();
-    let nbmsg = Beat::from_bytes(bmsg);
-    
-    assert!(nbmsg == msg, true);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use beat::quickcheck::quickcheck;
 
-#[test]
-fn from_bytes_test() {
-    let ts = u64_to_u8arr(u64::max_value());
-    let hs = Beat::create_checksum("foo", &ts);
-    let mut data = [0u8; 72];
+    #[test]
+    fn new_qc_test() {
+        fn qc(input: Vec<u8>) -> bool {
+            let msg = Beat::new(str::from_utf8(&input).unwrap());
+            let bmsg = msg.into_bytes();
+            let nbmsg = Beat::from_bytes(bmsg);
 
-    for b in 0..8 {
-        data[b] = ts[b];
+            nbmsg == msg
+        }
+        quickcheck(qc as fn(Vec<u8>) -> bool);
+    }
+    #[test]
+    fn to_bytes_test() {
+        let msg = Beat::new("foo");
+        let bmsg = msg.into_bytes();
+        let nbmsg = Beat::from_bytes(bmsg);
+
+        assert!(nbmsg == msg, true);
     }
 
-    for bb in 0..64 {
-        data[bb + 8] = hs[bb];
+    #[test]
+    fn from_bytes_test() {
+        let ts = u64_to_u8arr(u64::max_value());
+        let hs = Beat::create_checksum("foo", &ts);
+        let mut data = [0u8; 72];
+
+        for b in 0..8 {
+            data[b] = ts[b];
+        }
+
+        for bb in 0..64 {
+            data[bb + 8] = hs[bb];
+        }
+
+        let beat = Beat::from_bytes(data);
+        let bbeat = Beat {
+            timestamp: u64::max_value(),
+            hash: Beat::create_checksum("foo", &ts),
+        };
+
+        assert!(beat == bbeat, true);
+
     }
 
-    let beat = Beat::from_bytes(data);
-    let bbeat = Beat {
-        timestamp: u64::max_value(),
-        hash: Beat::create_checksum("foo", &ts),
-    };
+    #[test]
+    fn beat_eq_test() {
+        let a = Beat::new("foo");
+        let b = Beat::new("foo");
+        assert!(a.timestamp == b.timestamp);
+        assert!(a == b, true);
+    }
 
-    assert!(beat == bbeat, true);
+    #[test]
+    fn beat_ne_test() {
+        let a = Beat {
+            timestamp: 1u64,
+            hash: Beat::create_checksum("foo", &u64_to_u8arr(1u64)),
+        };
+        let b = Beat::new("foo");
+        let c = Beat::new("bar");
+        assert!(a != b, true);
+        assert!(a != c, true);
+    }
 
-}
+    #[test]
+    fn u64to8arrtou64_test() {
+        let big = u64::max_value();
+        let sml = u64_to_u8arr(big);
+        let nbi = u8arr_to_u64(sml);
 
-#[test]
-fn beat_eq_test() {
-    let a = Beat::new("foo");
-    let b = Beat::new("foo");
-    assert!(a.timestamp == b.timestamp);
-    assert!(a == b, true);
-}
+        let min = u64::min_value();
+        let mml = u64_to_u8arr(min);
+        let nmi = u8arr_to_u64(mml);
 
-#[test]
-fn beat_ne_test() {
-    let a = Beat {
-        timestamp: 1u64,
-        hash: Beat::create_checksum("foo", &u64_to_u8arr(1u64)),
-    };
-    let b = Beat::new("foo");
-    let c = Beat::new("bar");
-    assert!(a != b, true);
-    assert!(a != c, true);
-}
-
-#[test]
-fn u64to8arrtou64_test() {
-    let big = u64::max_value();
-    let sml = u64_to_u8arr(big);
-    let nbi = u8arr_to_u64(sml);
-
-    let min = u64::min_value();
-    let mml = u64_to_u8arr(min);
-    let nmi = u8arr_to_u64(mml);
-
-    assert_eq!(big, nbi);
-    assert_eq!(min, nmi);
+        assert_eq!(big, nbi);
+        assert_eq!(min, nmi);
+    }
 }
