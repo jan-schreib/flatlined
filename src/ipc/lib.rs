@@ -16,6 +16,7 @@ pub struct IPC {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IPCMsgType {
     Status = 1,
+    Statistic,
     Quit,
     Ok,
     Error,
@@ -80,7 +81,6 @@ impl IPC {
     pub fn new_bind(sock: &str) -> IPC {
         let mut s = IPC::create_socket();
         let e = IPC::bind_endpoint(&mut s, sock);
-
         IPC {
             socket: s,
             endpoint: e,
@@ -111,6 +111,7 @@ impl IPC {
 
     pub fn receive_msg(&mut self) -> IPCRecvResult {
         let mut buffer = [0u8; 1025];
+
         let mut ret = IPCMsg {
             typ: IPCMsgType::Any,
             msg: [0u8; 1024],
@@ -122,8 +123,9 @@ impl IPC {
                 }
                 match buffer[0] {
                     1 => ret.typ = IPCMsgType::Status,
-                    2 => ret.typ = IPCMsgType::Quit,
-                    3 => ret.typ = IPCMsgType::Ok,
+                    2 => ret.typ = IPCMsgType::Statistic,
+                    3 => ret.typ = IPCMsgType::Quit,
+                    4 => ret.typ = IPCMsgType::Ok,
                     _ => ret.typ = IPCMsgType::Any,
                 };
                 ret.msg.clone_from_slice(&buffer[1..1025]);
@@ -172,7 +174,7 @@ mod tests {
 
         assert_eq!(incoming.typ, IPCMsgType::Status);
         assert_eq!(std::str::from_utf8(&incoming.msg[..payload.len()]).unwrap(),
-                payload);
+                   payload);
 
         ipc.shutdown();
         ipc2.shutdown();
