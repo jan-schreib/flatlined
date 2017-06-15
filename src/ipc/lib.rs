@@ -54,16 +54,15 @@ impl IPCMsg {
     pub fn create_payload(&mut self, msg: &str) -> IPCMsgPayloadResult {
         let mut ret = [0u8; 1024];
         let mut i = 0;
-        match msg.is_empty() {
-            true => return Err("Can't send empty message!".to_string()),
-            false => {
-                for c in msg.as_bytes() {
-                    ret[i] = *c;
-                    i += 1;
-                }
-                self.msg = ret;
-                Ok(i)
+        if msg.is_empty() {
+            Err("Can't send empty message!".to_string())
+        } else {
+            for c in msg.as_bytes() {
+                ret[i] = *c;
+                i += 1;
             }
+            self.msg = ret;
+            Ok(i)
         }
     }
 }

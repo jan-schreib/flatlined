@@ -18,6 +18,17 @@ impl PartialEq for Beat {
     }
 }
 
+impl Clone for Beat {
+    fn clone(&self) -> Beat {
+        let mut b = Beat {
+            timestamp: self.timestamp,
+            hash: [0; 64],
+        };
+        b.hash.clone_from_slice(&self.hash);
+        b
+    }
+}
+
 fn u64_to_u8arr(value: u64) -> [u8; 8] {
     let mut ret: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
     ret[0] |= (value & 0xFF) as u8;
@@ -91,7 +102,7 @@ impl Beat {
         }
     }
 
-    pub fn into_bytes(&self) -> [u8; 72] {
+    pub fn into_bytes(self) -> [u8; 72] {
         let mut ret = [0u8; 72];
         let ts = u64_to_u8arr(self.timestamp);
 
@@ -111,17 +122,18 @@ mod tests {
     fn new_qc_test() {
         fn qc(input: Vec<u8>) -> bool {
             let msg = Beat::new(str::from_utf8(&input).unwrap());
-            let bmsg = msg.into_bytes();
+            let bmsg = msg.clone().into_bytes();
             let nbmsg = Beat::from_bytes(bmsg);
 
             nbmsg == msg
         }
         quickcheck(qc as fn(Vec<u8>) -> bool);
     }
+
     #[test]
     fn to_bytes_test() {
         let msg = Beat::new("foo");
-        let bmsg = msg.into_bytes();
+        let bmsg = msg.clone().into_bytes();
         let nbmsg = Beat::from_bytes(bmsg);
 
         assert!(nbmsg == msg, true);
