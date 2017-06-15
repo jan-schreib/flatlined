@@ -48,9 +48,9 @@ impl BeatListenSocket {
                     if log_enabled!(LogLevel::Debug) {
                         debug!("Beat received.");
                     }
-                    return Ok(Beat::from_bytes(buf));
+                    Ok(Beat::from_bytes(buf))
                 } else {
-                    return Err(BeatError::WrongSize);
+                    Err(BeatError::WrongSize)
                 }
             },
             Err(_) => Err(BeatError::ListenError),
@@ -68,7 +68,7 @@ impl BeatSendSocket {
 
     pub fn send_all(&self) -> () {
         let k = self.conf.clone();
-        for s in k.server.unwrap().into_iter() {
+        for s in k.server.unwrap() {
             match self.send(s.key.clone(), s.address.clone(), s.port) {
                 Ok(_) => (),
                 Err(_) => error!("Send error!"),

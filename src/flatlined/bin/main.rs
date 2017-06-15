@@ -60,7 +60,7 @@ fn ipc_handler(stats: Vec<Statistic>) -> () {
                           typ: IPCMsgType::Any,
                           msg: [0; 1024],
                       };
-                      match ipc.receive_msg().unwrap().typ {
+                        match ipc.receive_msg().unwrap().typ {
                           IPCMsgType::Ok => {
                               m.typ = IPCMsgType::Ok;
                               m.create_payload("Ok").unwrap();
@@ -157,7 +157,7 @@ fn main() {
     //server - at least one server was defined in the config
 
     //thread signal via channels to stop when ipc gets an exit
-    if servers.len() == 0 {
+    if servers.is_empty() {
         let socket = BeatListenSocket::new(&opts);
         thread::spawn(move || loop {
                           match socket.listen() {
@@ -166,7 +166,9 @@ fn main() {
                           }
 
                       });
-        loop {}
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+        }
     } else {
         let send = BeatSendSocket::new(&opts);
         let recv = BeatListenSocket::new(&opts);
@@ -179,7 +181,8 @@ fn main() {
                       });
 
         loop {
-            //send.send_all();
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+            send.send_all();
         }
     }
 

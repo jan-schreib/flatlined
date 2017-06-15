@@ -82,32 +82,22 @@ impl Beat {
         let mut ts = [0u8; 8];
         let mut cs = [0u8; 64];
 
-        for b in 0..8 {
-            ts[b] = data[b];
-        }
+        ts[..].clone_from_slice(&data[..8]);
+        cs[..].clone_from_slice(&data[8..]);
 
-        for bb in 0..64 {
-            cs[bb] = data[bb + 8];
-        }
-
-        let ret = Beat {
+        Beat {
             timestamp: u8arr_to_u64(ts),
             hash: cs,
-        };
-
-        ret
+        }
     }
 
     pub fn into_bytes(&self) -> [u8; 72] {
         let mut ret = [0u8; 72];
         let ts = u64_to_u8arr(self.timestamp);
 
-        for d in 0..8 {
-            ret[d] = ts[d];
-        }
-        for dd in 0..64 {
-            ret[dd + 8] = self.hash[dd];
-        }
+        ret[..8].clone_from_slice(&ts[..8]);
+        ret[8..].clone_from_slice(&self.hash[..64]);
+
         ret
     }
 }

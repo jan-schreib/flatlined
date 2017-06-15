@@ -35,9 +35,8 @@ impl FlatConf {
 
         let mut buffer = String::new();
 
-        match f.read_to_string(&mut buffer) {
-            Err(e) => panic!("Not able to read: {}", e.description()),
-            _ => {}
+        if let Err(e) = f.read_to_string(&mut buffer) {
+            panic!("Not able to read: {}", e.description());
         }
 
         FlatConf::parse(&mut buffer)
@@ -54,16 +53,24 @@ fn parse_test() {
     let mut all = input.clone() + input2;
     let conf = FlatConf::parse(&mut all);
 
+    let servers: Vec<Server>;
+    let nopts = conf.clone();
+
+    match nopts.server {
+        Some(x) => servers = x.clone(),
+        None => servers = Vec::new(),
+    }
+
     assert_eq!(conf.port, 1337);
     assert_eq!(conf.logfile, "flat.log");
     assert_eq!(conf.socket, "flat.sock");
     assert_eq!(conf.key, "secret");
     assert_eq!(conf.verbose, true);
-    assert_eq!(conf.server.len(), 2);
-    assert_eq!(conf.server[0].address, "10.0.0.1");
-    assert_eq!(conf.server[0].port, 8888);
-    assert_eq!(conf.server[0].key, "foo");
-    assert_eq!(conf.server[1].address, "10.0.0.2");
-    assert_eq!(conf.server[1].port, 9999);
-    assert_eq!(conf.server[1].key, "bar");
+    assert_eq!(servers.len(), 2);
+    assert_eq!(servers[0].address, "10.0.0.1");
+    assert_eq!(servers[0].port, 8888);
+    assert_eq!(servers[0].key, "foo");
+    assert_eq!(servers[1].address, "10.0.0.2");
+    assert_eq!(servers[1].port, 9999);
+    assert_eq!(servers[1].key, "bar");
 }
