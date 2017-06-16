@@ -67,9 +67,11 @@ fn main() {
         }
     }
 
+    let com: &str;
     let msg_type: IPCMsgType;
     match matches.value_of("command") {
         Some(x) => {
+            com = x;
             match x.as_ref() {
                 "ok" => msg_type = IPCMsgType::Ok,
                 "status" => msg_type = IPCMsgType::Status,
@@ -78,7 +80,10 @@ fn main() {
                 _ => msg_type = IPCMsgType::Any,
             }
         }
-        None => msg_type = IPCMsgType::Ok,
+        None => {
+            msg_type = IPCMsgType::Ok;
+            com = "ok";
+        },
     }
 
     let mut msg = IPCMsg {
@@ -86,6 +91,6 @@ fn main() {
         msg: [0; 1024],
     };
 
-    msg.create_payload(matches.value_of("command").unwrap_or("status")).unwrap();
+    msg.create_payload(com).unwrap();
     communicate(&mut ipc, msg);
 }
