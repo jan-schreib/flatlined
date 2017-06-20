@@ -28,6 +28,9 @@ use nix::unistd;
 use server::Server;
 use std::process;
 use std::thread;
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
+
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
@@ -47,20 +50,36 @@ fn uidcheck() -> () {
     }
 }
 
-fn ipc_handler(stats: Vec<Statistic>) -> () {
+fn ipc_handler(statistic: Vec<Statistic>,
+               (tx, rx): (Sender<Statistic>, Receiver<Statistic>))
+               -> () {
     let mut ipc = IPC::new_bind(FLATSOCK);
-
+    let mut stats = statistic.clone();
     let meta = fs::metadata(FLATSOCKPATH).unwrap();
     let mut permissions = meta.permissions();
     permissions.set_mode(0o666);
     fs::set_permissions(FLATSOCKPATH, permissions).unwrap();
 
     thread::spawn(move || loop {
+                      std::thread::sleep(std::time::Duration::from_millis(1000));
+
+                      match rx.try_iter().last() {
+                          Some(v) => {
+                              for s in &mut stats {
+                                  if s.server == v.server {
+                                      s.send_beats = v.send_beats;
+                                      s.recv_beats = v.recv_beats;
+                                  }
+                              }
+                          }
+                          None => continue,
+                      };
+
                       let mut m = IPCMsg {
                           typ: IPCMsgType::Any,
                           msg: [0; 1024],
                       };
-                        match ipc.receive_msg().unwrap().typ {
+                      match ipc.receive_msg().unwrap().typ {
                           IPCMsgType::Ok => {
                               m.typ = IPCMsgType::Ok;
                               m.create_payload("Ok").unwrap();
@@ -131,8 +150,10 @@ fn main() {
     }
 
     let mut stats: Vec<Statistic> = Vec::new();
-    for s in &servers {
-        stats.push(Statistic::new(s));
+    if !servers.is_empty() {
+        for s in &servers {
+            stats.push(Statistic::new(s));
+        }
     }
 
     if !matches.is_present("debug") {
@@ -149,41 +170,66 @@ fn main() {
             Err(e) => error!("{}", e),
         }
     }
-
-    ipc_handler(stats.clone());
+    let (tx, rx): (Sender<Statistic>, Receiver<Statistic>) = mpsc::channel();
+    let ipc_tx = tx.clone();
+    ipc_handler(stats.clone(), (ipc_tx, rx));
 
     //determine mode:
-    //client - no servers were defined in the config
-    //server - at least one server was defined in the config
-
+    //server - no servers were defined in the config
+    //server receives beats from clients. the clients know the key of the server.
+    //client - at least one server was defined in the config
+    //client sends beats to each server defined
     //thread signal via channels to stop when ipc gets an exit
+
     if servers.is_empty() {
         let socket = BeatListenSocket::new(&opts);
         thread::spawn(move || loop {
+                          std::thread::sleep(std::time::Duration::from_millis(1000));
                           match socket.listen() {
-                              Ok(_) => println!("Message received and Ok!"),
+                              Ok((beat, ip)) => {
+                                  match beat.verify_beat(&opts.key) {
+                                      Ok(_) => {
+                                          //handle existing server
+                                          stats.push(Statistic {
+                                                         recv_beats: 1,
+                                                         send_beats: 0,
+                                                         server: Server {
+                                                             address: ip.to_string(),
+                                                             port: 0,
+                                                             key: "".to_string(),
+                                                         },
+                                                     });
+                                      },
+                                      Err(_) => println!("Could not verifiy beat")
+                                  }
+                              }
                               Err(_) => println!("Error!"),
                           }
-
+                          //hande stats
                       });
-        loop {
-            std::thread::sleep(std::time::Duration::from_millis(1000));
-        }
     } else {
         let send = BeatSendSocket::new(&opts);
-        let recv = BeatListenSocket::new(&opts);
-
+        // let mut s = Statistic {
+        //    send_beats: 6,
+        //    recv_beats: 2,
+        //    server: Server {
+        //        address: "10.0.0.1".to_string(),
+        //        port: 8888,
+        //        key: "foo".to_string(),
+        //    },
+        // };
         thread::spawn(move || loop {
-                          match recv.listen() {
-                              Ok(_) => println!("Message received and Ok!"),
-                              Err(_) => println!("Error!"),
-                          }
+                          send.send_all();
                       });
 
-        loop {
-            std::thread::sleep(std::time::Duration::from_millis(1000));
-            send.send_all();
-        }
+        //        loop {
+        //            std::thread::sleep(std::time::Duration::from_millis(1000));
+        //
+        //            s.incr_send();
+        //            s.incr_recv();
+        //            let ss = s.clone();
+        //            tx.send(ss).unwrap();
+        //       }
     }
 
 }

@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct Server {
     pub address: String,
     pub port: u16,

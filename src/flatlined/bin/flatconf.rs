@@ -12,7 +12,7 @@ pub struct FlatConf {
     pub port: u16,
     logfile: String,
     socket: String,
-    key: String,
+    pub key: String,
     verbose: bool,
     pub server: Option<Vec<Server>>,
 }

@@ -1,7 +1,8 @@
 use std::net::UdpSocket;
 use flatconf::FlatConf;
-use beat::Beat;
+use beat::*;
 use log::*;
+use std::net::IpAddr;
 
 pub struct BeatListenSocket {
     socket: UdpSocket,
@@ -11,15 +12,8 @@ pub struct BeatSendSocket {
     socket: UdpSocket,
     conf: FlatConf,
 }
-
-#[derive(Debug)]
-pub enum BeatError {
-    WrongSize,
-    ListenError,
-    SendError,
-}
     
-pub type BeatResult = Result<Beat, BeatError>;
+pub type BeatResult = Result<(Beat, IpAddr), BeatError>;
 pub type BeatSendResult = Result<(), BeatError>;
 
 impl BeatListenSocket {
@@ -43,12 +37,12 @@ impl BeatListenSocket {
     pub fn listen(&self) -> BeatResult {
         let mut buf = [0; 72];
         match self.socket.recv_from(&mut buf) {
-            Ok((count, _)) => {
+            Ok((count, addr)) => {
                 if count == 72 {
                     if log_enabled!(LogLevel::Debug) {
                         debug!("Beat received.");
                     }
-                    Ok(Beat::from_bytes(buf))
+                    Ok((Beat::from_bytes(buf), addr.ip()))
                 } else {
                     Err(BeatError::WrongSize)
                 }
@@ -61,7 +55,7 @@ impl BeatListenSocket {
 impl BeatSendSocket {
     pub fn new(conf: &FlatConf) -> BeatSendSocket {
         BeatSendSocket {
-            socket: UdpSocket::bind(("127.0.0.1", conf.port+1)).unwrap(),
+            socket: UdpSocket::bind(("127.0.0.1", conf.port)).unwrap(),
             conf: conf.clone(),
         }
     }

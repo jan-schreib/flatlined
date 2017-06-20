@@ -12,6 +12,14 @@ pub struct Beat {
     hash: [u8; 64],
 }
 
+#[derive(Debug)]
+pub enum BeatError {
+    WrongSize,
+    ListenError,
+    SendError,
+    WrongChecksum,
+}
+
 impl PartialEq for Beat {
     fn eq(&self, other: &Beat) -> bool {
         self.timestamp == other.timestamp && constant_time_eq(&self.hash, &other.hash)
@@ -110,6 +118,15 @@ impl Beat {
         ret[8..].clone_from_slice(&self.hash[..64]);
 
         ret
+    }
+
+    pub fn verify_beat(&self, key: &str) -> Result<bool, BeatError> {
+        let sum = Beat::create_checksum(key, &u64_to_u8arr(self.timestamp));
+        if constant_time_eq(&sum, &self.hash) {
+            Ok(true)
+        } else {
+            Err(BeatError::WrongChecksum)
+        }
     }
 }
 
