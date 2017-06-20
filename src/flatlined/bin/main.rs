@@ -137,8 +137,24 @@ fn main() {
 
     let opts: FlatConf;
     match matches.value_of("config") {
-        Some(x) => opts = FlatConf::parse_file(x.to_owned()),
-        None => opts = FlatConf::parse_file(DEFAULT_CONF.to_owned()),
+        Some(x) => {
+            match FlatConf::parse_file(x.to_owned()) {
+                Ok(conf) => opts = conf,
+                Err(err) => {
+                    error!("{}", err.to_string());
+                    process::exit(1);
+                }
+            }
+        }
+        None => {
+            match FlatConf::parse_file(DEFAULT_CONF.to_owned()) {
+                Ok(conf) => opts = conf,
+                Err(err) => {
+                    error!("{}", err.to_string());
+                    process::exit(1)
+                }
+            }
+        }
     }
 
     let servers: Vec<Server>;
@@ -199,8 +215,8 @@ fn main() {
                                                              key: "".to_string(),
                                                          },
                                                      });
-                                      },
-                                      Err(_) => println!("Could not verifiy beat")
+                                      }
+                                      Err(_) => println!("Could not verifiy beat"),
                                   }
                               }
                               Err(_) => println!("Error!"),
