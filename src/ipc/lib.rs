@@ -211,7 +211,7 @@ impl IPC {
 }
 
 #[cfg(test)]
-mod tests {
+mod ipc {
     use super::*;
     use quickcheck::quickcheck;
 
