@@ -148,6 +148,18 @@ mod tests {
     }
 
     #[test]
+    fn verification_test() {
+        let b = Beat::new("key");
+        assert!(b.verify_beat("key").unwrap(), true);
+    }
+
+    #[test]
+    fn verification_fails_test() {
+        let b = Beat::new("key");
+        assert!(b.verify_beat("not_the_key").is_err());
+    }
+
+    #[test]
     fn to_bytes_test() {
         let msg = Beat::new("foo");
         let bmsg = msg.clone().into_bytes();
