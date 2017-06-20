@@ -210,16 +210,24 @@ fn main() {
                 Ok((beat, ip)) => {
                     match beat.verify_beat(&opts.key) {
                         Ok(_) => {
-                            //handle existing server
-                            stats.push(Statistic {
-                                recv_beats: 1,
-                                send_beats: 0,
-                                server: Server {
-                                    address: ip.to_string(),
-                                    port: 0,
-                                    key: "".to_string(),
-                                },
-                            });
+                            match stats.iter().position(
+                                |ref mut x| x.server.address == ip.to_string(),
+                            ) {
+                                Some(x) => {
+                                    stats[x].incr_recv();
+                                }
+                                None => {
+                                    stats.push(Statistic {
+                                        recv_beats: 1,
+                                        send_beats: 0,
+                                        server: Server {
+                                            address: ip.to_string(),
+                                            port: 0,
+                                            key: "".to_string(),
+                                        },
+                                    })
+                                }
+                            };
                         }
                         Err(_) => println!("Could not verifiy beat"),
                     }
