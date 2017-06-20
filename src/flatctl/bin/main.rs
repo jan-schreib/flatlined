@@ -50,12 +50,14 @@ fn main() {
 
     let matches = App::new("flatctl - the tool for controlling the heartbeat daemon")
         .version("0.1")
-        .arg(Arg::with_name("command")
-                 .short("c")
-                 .long("command")
-                 .value_name("COMMAND")
-                 .help("Valid commands: ok (default), status, statistic, quit, any")
-                 .takes_value(true))
+        .arg(
+            Arg::with_name("command")
+                .short("c")
+                .long("command")
+                .value_name("COMMAND")
+                .help("Valid commands: ok (default), status, statistic, quit, any")
+                .takes_value(true),
+        )
         .get_matches();
 
     let mut ipc: IPC;
@@ -83,7 +85,7 @@ fn main() {
         None => {
             msg_type = IPCMsgType::Ok;
             com = "ok";
-        },
+        }
     }
 
     let mut msg = IPCMsg {

@@ -199,9 +199,11 @@ impl IPC {
         match self.socket.write(&buffer) {
             Ok(count) => {
                 if log_enabled!(LogLevel::Debug) {
-                    debug!("Message: {} of size: {} send",
-                           std::str::from_utf8(&msg.msg).unwrap(),
-                           count);
+                    debug!(
+                        "Message: {} of size: {} send",
+                        std::str::from_utf8(&msg.msg).unwrap(),
+                        count
+                    );
                 }
                 Ok(())
             }
@@ -230,8 +232,10 @@ mod ipc {
         let incoming = ipc.receive_msg().unwrap();
 
         assert_eq!(incoming.typ, IPCMsgType::Status);
-        assert_eq!(std::str::from_utf8(&incoming.msg[..payload.len()]).unwrap(),
-                   payload);
+        assert_eq!(
+            std::str::from_utf8(&incoming.msg[..payload.len()]).unwrap(),
+            payload
+        );
 
         ipc.shutdown();
         ipc2.shutdown();

@@ -50,9 +50,10 @@ fn uidcheck() -> () {
     }
 }
 
-fn ipc_handler(statistic: Vec<Statistic>,
-               (tx, rx): (Sender<Statistic>, Receiver<Statistic>))
-               -> () {
+fn ipc_handler(
+    statistic: Vec<Statistic>,
+    (tx, rx): (Sender<Statistic>, Receiver<Statistic>),
+) -> () {
     let mut ipc = IPC::new_bind(FLATSOCK);
     let mut stats = statistic.clone();
     let meta = fs::metadata(FLATSOCKPATH).unwrap();
@@ -61,59 +62,59 @@ fn ipc_handler(statistic: Vec<Statistic>,
     fs::set_permissions(FLATSOCKPATH, permissions).unwrap();
 
     thread::spawn(move || loop {
-                      std::thread::sleep(std::time::Duration::from_millis(1000));
+        std::thread::sleep(std::time::Duration::from_millis(1000));
 
-                      match rx.try_iter().last() {
-                          Some(v) => {
-                              for s in &mut stats {
-                                  if s.server == v.server {
-                                      s.send_beats = v.send_beats;
-                                      s.recv_beats = v.recv_beats;
-                                  }
-                              }
-                          }
-                          None => continue,
-                      };
+        match rx.try_iter().last() {
+            Some(v) => {
+                for s in &mut stats {
+                    if s.server == v.server {
+                        s.send_beats = v.send_beats;
+                        s.recv_beats = v.recv_beats;
+                    }
+                }
+            }
+            None => continue,
+        };
 
-                      let mut m = IPCMsg {
-                          typ: IPCMsgType::Any,
-                          msg: [0; 1024],
-                      };
-                      match ipc.receive_msg().unwrap().typ {
-                          IPCMsgType::Ok => {
-                              m.typ = IPCMsgType::Ok;
-                              m.create_payload("Ok").unwrap();
-                          }
-                          IPCMsgType::Status => {
-                              m.typ = IPCMsgType::Status;
-                              m.create_payload("Running").unwrap();
-                          }
-                          IPCMsgType::Statistic => {
-                              m.typ = IPCMsgType::Statistic;
-                              let mut ret: String = String::with_capacity(1024);
-                              if stats.is_empty() {
-                                  m.create_payload("Client mode.").unwrap();
-                              } else {
-                                  for s in &stats {
-                                      ret.push_str(&s.to_string());
-                                  }
-                                  m.create_payload(&ret).unwrap();
-                              }
-                          }
-                          IPCMsgType::Quit => {
-                              m.typ = IPCMsgType::Quit;
-                              m.create_payload("Server shutting down").unwrap();
-                              ipc.send_msg(m).unwrap();
-                              ipc.shutdown();
-                              process::exit(0);
-                          }
-                          _ => {
-                              m.typ = IPCMsgType::Any;
-                              m.create_payload("Placeholder").unwrap();
-                          }
-                      }
-                      ipc.send_msg(m).unwrap();
-                  });
+        let mut m = IPCMsg {
+            typ: IPCMsgType::Any,
+            msg: [0; 1024],
+        };
+        match ipc.receive_msg().unwrap().typ {
+            IPCMsgType::Ok => {
+                m.typ = IPCMsgType::Ok;
+                m.create_payload("Ok").unwrap();
+            }
+            IPCMsgType::Status => {
+                m.typ = IPCMsgType::Status;
+                m.create_payload("Running").unwrap();
+            }
+            IPCMsgType::Statistic => {
+                m.typ = IPCMsgType::Statistic;
+                let mut ret: String = String::with_capacity(1024);
+                if stats.is_empty() {
+                    m.create_payload("Client mode.").unwrap();
+                } else {
+                    for s in &stats {
+                        ret.push_str(&s.to_string());
+                    }
+                    m.create_payload(&ret).unwrap();
+                }
+            }
+            IPCMsgType::Quit => {
+                m.typ = IPCMsgType::Quit;
+                m.create_payload("Server shutting down").unwrap();
+                ipc.send_msg(m).unwrap();
+                ipc.shutdown();
+                process::exit(0);
+            }
+            _ => {
+                m.typ = IPCMsgType::Any;
+                m.create_payload("Placeholder").unwrap();
+            }
+        }
+        ipc.send_msg(m).unwrap();
+    });
 }
 
 fn main() {
@@ -122,17 +123,21 @@ fn main() {
 
     let matches = App::new("flatlined - a heartbeat daemon")
         .version("0.1")
-        .arg(Arg::with_name("config")
-                 .short("c")
-                 .long("config")
-                 .value_name("FILE")
-                 .help("Sets a custom config file")
-                 .takes_value(true))
-        .arg(Arg::with_name("debug")
-                 .short("d")
-                 .long("debug")
-                 .help("Debug mode, don't detach or become a daemon.")
-                 .takes_value(false))
+        .arg(
+            Arg::with_name("config")
+                .short("c")
+                .long("config")
+                .value_name("FILE")
+                .help("Sets a custom config file")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("debug")
+                .short("d")
+                .long("debug")
+                .help("Debug mode, don't detach or become a daemon.")
+                .takes_value(false),
+        )
         .get_matches();
 
     let opts: FlatConf;
@@ -200,29 +205,29 @@ fn main() {
     if servers.is_empty() {
         let socket = BeatListenSocket::new(&opts);
         thread::spawn(move || loop {
-                          std::thread::sleep(std::time::Duration::from_millis(1000));
-                          match socket.listen() {
-                              Ok((beat, ip)) => {
-                                  match beat.verify_beat(&opts.key) {
-                                      Ok(_) => {
-                                          //handle existing server
-                                          stats.push(Statistic {
-                                                         recv_beats: 1,
-                                                         send_beats: 0,
-                                                         server: Server {
-                                                             address: ip.to_string(),
-                                                             port: 0,
-                                                             key: "".to_string(),
-                                                         },
-                                                     });
-                                      }
-                                      Err(_) => println!("Could not verifiy beat"),
-                                  }
-                              }
-                              Err(_) => println!("Error!"),
-                          }
-                          //hande stats
-                      });
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+            match socket.listen() {
+                Ok((beat, ip)) => {
+                    match beat.verify_beat(&opts.key) {
+                        Ok(_) => {
+                            //handle existing server
+                            stats.push(Statistic {
+                                recv_beats: 1,
+                                send_beats: 0,
+                                server: Server {
+                                    address: ip.to_string(),
+                                    port: 0,
+                                    key: "".to_string(),
+                                },
+                            });
+                        }
+                        Err(_) => println!("Could not verifiy beat"),
+                    }
+                }
+                Err(_) => println!("Error!"),
+            }
+            //hande stats
+        });
     } else {
         let send = BeatSendSocket::new(&opts);
         // let mut s = Statistic {
@@ -235,8 +240,8 @@ fn main() {
         //    },
         // };
         thread::spawn(move || loop {
-                          send.send_all();
-                      });
+            send.send_all();
+        });
 
         //        loop {
         //            std::thread::sleep(std::time::Duration::from_millis(1000));

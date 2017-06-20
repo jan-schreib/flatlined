@@ -12,7 +12,7 @@ pub struct BeatSendSocket {
     socket: UdpSocket,
     conf: FlatConf,
 }
-    
+
 pub type BeatResult = Result<(Beat, IpAddr), BeatError>;
 pub type BeatSendResult = Result<(), BeatError>;
 
@@ -29,9 +29,7 @@ impl BeatListenSocket {
         }
     }
     pub fn new(conf: &FlatConf) -> BeatListenSocket {
-        BeatListenSocket {
-            socket: BeatListenSocket::bind(conf.port),
-        }
+        BeatListenSocket { socket: BeatListenSocket::bind(conf.port) }
     }
 
     pub fn listen(&self) -> BeatResult {
@@ -46,7 +44,7 @@ impl BeatListenSocket {
                 } else {
                     Err(BeatError::WrongSize)
                 }
-            },
+            }
             Err(_) => Err(BeatError::ListenError),
         }
     }
@@ -71,14 +69,17 @@ impl BeatSendSocket {
     }
 
     fn send(&self, key: String, addr: String, port: u16) -> BeatSendResult {
-        match self.socket.send_to(&Beat::new(key.as_str()).into_bytes(), (addr.as_str(), port)) {
-                Ok(send) => {
-                    if log_enabled!(LogLevel::Debug) {
-                        debug!("Send {} bytes!", send);
-                    }
-                    Ok(())
-                },
-                Err(_) => Err(BeatError::SendError),
+        match self.socket.send_to(
+            &Beat::new(key.as_str()).into_bytes(),
+            (addr.as_str(), port),
+        ) {
+            Ok(send) => {
+                if log_enabled!(LogLevel::Debug) {
+                    debug!("Send {} bytes!", send);
+                }
+                Ok(())
             }
+            Err(_) => Err(BeatError::SendError),
+        }
     }
 }
