@@ -17,13 +17,21 @@ pub struct FlatConf {
     pub server: Option<Vec<Server>>,
 }
 
+pub type ParsingResult = Result<FlatConf, String>;
+
 impl FlatConf {
-    pub fn parse(conf: &mut String) -> FlatConf {
-        let opts: FlatConf = toml::from_str(conf).unwrap();
-        opts
+    pub fn parse(conf: &mut String) -> ParsingResult {
+        let opts: FlatConf;
+        match toml::from_str(conf) {
+            Ok(conf) => {
+                opts = conf;
+                Ok(opts)
+            }
+            Err(e) => Err(e.to_string()),
+        }
     }
 
-    pub fn parse_file(path: String) -> FlatConf {
+    pub fn parse_file(path: String) -> ParsingResult {
         let mut f;
         match File::open(Path::new(&path)) {
             Ok(open) => f = open,
@@ -51,8 +59,7 @@ fn parse_test() {
     let input2 = "[[server]] \n address = '10.0.0.1' \n port = 8888 \n key = 'foo' \n [[server]] \
                   \n address = '10.0.0.2' \n port = 9999 \n key = 'bar' \n";
     let mut all = input.clone() + input2;
-    let conf = FlatConf::parse(&mut all);
-
+    let conf = FlatConf::parse(&mut all).unwrap();
     let servers: Vec<Server>;
     let nopts = conf.clone();
 
@@ -73,4 +80,35 @@ fn parse_test() {
     assert_eq!(servers[1].address, "10.0.0.2");
     assert_eq!(servers[1].port, 9999);
     assert_eq!(servers[1].key, "bar");
+}
+
+#[test]
+fn partial_conf_parse_test() {
+    let mut input = "port = 1337 \n
+        logfile = 'flat.log' \n \
+        socket = 'flat.sock' \n \
+        key = 'secret' \n \
+        verbose = true \n"
+        .to_string();
+
+    let conf = FlatConf::parse(&mut input).unwrap();
+
+    assert_eq!(conf.port, 1337);
+    assert_eq!(conf.logfile, "flat.log");
+    assert_eq!(conf.socket, "flat.sock");
+    assert_eq!(conf.key, "secret");
+    assert_eq!(conf.verbose, true);
+    assert_eq!(conf.server.is_none(), true);
+}
+
+#[test]
+fn invalid_conf_parse_test() {
+    let mut input = "part = 1337 \n \
+        lögfile = 'flat.log' \n \
+        sockt = 'flat.sock' \n \
+        key = 'secret' \n \
+        verböse = true \n"
+        .to_string();
+
+    assert!(FlatConf::parse(&mut input).is_err());
 }
