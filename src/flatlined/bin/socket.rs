@@ -3,6 +3,7 @@ use flatconf::FlatConf;
 use beat::*;
 use log::*;
 use std::net::IpAddr;
+use std::error::Error;
 
 pub struct BeatListenSocket {
     socket: UdpSocket,
@@ -59,17 +60,18 @@ impl BeatSendSocket {
     }
 
     pub fn send(&self, key: String, addr: String, port: u16) -> BeatSendResult {
-        match self.socket.send_to(
-            &Beat::new(key.as_str()).into_bytes(),
-            (addr.as_str(), port),
-        ) {
+        let msg = Beat::new(key.as_str()).into_bytes();
+        match self.socket.send_to(&msg, "ip:port") {
             Ok(send) => {
                 if log_enabled!(LogLevel::Debug) {
                     debug!("Send {} bytes!", send);
                 }
                 Ok(())
             }
-            Err(_) => Err(BeatError::SendError),
+            Err(e) => {
+                println!("{}", e.description());
+                Err(BeatError::SendError)
+            }
         }
     }
 }
