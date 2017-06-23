@@ -10,7 +10,7 @@ pub struct BeatListenSocket {
 
 pub struct BeatSendSocket {
     socket: UdpSocket,
-    conf: FlatConf,
+    pub conf: FlatConf,
 }
 
 pub type BeatResult = Result<(Beat, IpAddr), BeatError>;
@@ -58,17 +58,7 @@ impl BeatSendSocket {
         }
     }
 
-    pub fn send_all(&self) -> () {
-        let k = self.conf.clone();
-        for s in k.server.unwrap() {
-            match self.send(s.key.clone(), s.address.clone(), s.port) {
-                Ok(_) => (),
-                Err(_) => error!("Send error!"),
-            }
-        }
-    }
-
-    fn send(&self, key: String, addr: String, port: u16) -> BeatSendResult {
+    pub fn send(&self, key: String, addr: String, port: u16) -> BeatSendResult {
         match self.socket.send_to(
             &Beat::new(key.as_str()).into_bytes(),
             (addr.as_str(), port),

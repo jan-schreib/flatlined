@@ -18,6 +18,7 @@ impl fmt::Display for Statistic {
         Ok(())
     }
 }
+
 impl Statistic {
     pub fn new(s: &Server) -> Statistic {
         Statistic {

@@ -51,11 +51,11 @@ fn uidcheck() -> () {
 }
 
 fn ipc_handler(
-    statistic: Vec<Statistic>,
-    (tx, rx): (Sender<Statistic>, Receiver<Statistic>),
+    statistic: &[Statistic],
+    rx: Receiver<Statistic>,
 ) -> () {
     let mut ipc = IPC::new_bind(FLATSOCK);
-    let mut stats = statistic.clone();
+    let mut stats = statistic.to_vec();
     let meta = fs::metadata(FLATSOCKPATH).unwrap();
     let mut permissions = meta.permissions();
     permissions.set_mode(0o666);
@@ -191,9 +191,8 @@ fn main() {
             Err(e) => error!("{}", e),
         }
     }
-    let (tx, rx): (Sender<Statistic>, Receiver<Statistic>) = mpsc::channel();
-    let ipc_tx = tx.clone();
-    ipc_handler(stats.clone(), (ipc_tx, rx));
+    let (_, rx): (Sender<Statistic>, Receiver<Statistic>) = mpsc::channel();
+    ipc_handler(&stats, rx);
 
     //determine mode:
     //server - no servers were defined in the config
@@ -248,7 +247,14 @@ fn main() {
         //    },
         // };
         thread::spawn(move || loop {
-            send.send_all();
+            for (i, s) in send.conf.server.clone().iter().enumerate() {
+                match send.send(s[i].key.clone(), s[i].address.clone(), s[i].port) {
+                    Ok(_) => {
+                        stats[i].incr_send();
+                    },
+                    Err(_) => error!("Send error!"),
+                }
+            }
         });
 
         //        loop {
