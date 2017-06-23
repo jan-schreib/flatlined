@@ -241,6 +241,7 @@ fn main() {
         let send = BeatSendSocket::new(&opts);
 
         sr_thread = thread::spawn(move || loop {
+            std::thread::sleep(std::time::Duration::from_millis(1000));
             for (i, s) in send.conf.server.clone().iter().enumerate() {
                 match send.send(s[i].key.clone(), s[i].address.clone(), s[i].port) {
                     Ok(_) => {
