@@ -28,6 +28,7 @@ use nix::unistd;
 use server::Server;
 use std::process;
 use std::thread;
+use std::thread::JoinHandle;
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
 
@@ -73,7 +74,7 @@ fn ipc_handler(
                     }
                 }
             }
-            None => continue,
+            None => (),
         };
 
         let mut m = IPCMsg {
@@ -120,6 +121,7 @@ fn ipc_handler(
 fn main() {
     env_logger::init().unwrap();
     uidcheck();
+    let sr_thread: JoinHandle<_>;
 
     let matches = App::new("flatlined - a heartbeat daemon")
         .version("0.1")
@@ -203,7 +205,7 @@ fn main() {
 
     if servers.is_empty() {
         let socket = BeatListenSocket::new(&opts);
-        thread::spawn(move || loop {
+        sr_thread = thread::spawn(move || loop {
             std::thread::sleep(std::time::Duration::from_millis(1000));
             match socket.listen() {
                 Ok((beat, ip)) => {
@@ -237,16 +239,8 @@ fn main() {
         });
     } else {
         let send = BeatSendSocket::new(&opts);
-        // let mut s = Statistic {
-        //    send_beats: 6,
-        //    recv_beats: 2,
-        //    server: Server {
-        //        address: "10.0.0.1".to_string(),
-        //        port: 8888,
-        //        key: "foo".to_string(),
-        //    },
-        // };
-        thread::spawn(move || loop {
+
+        sr_thread = thread::spawn(move || loop {
             for (i, s) in send.conf.server.clone().iter().enumerate() {
                 match send.send(s[i].key.clone(), s[i].address.clone(), s[i].port) {
                     Ok(_) => {
@@ -257,14 +251,6 @@ fn main() {
             }
         });
 
-        //        loop {
-        //            std::thread::sleep(std::time::Duration::from_millis(1000));
-        //
-        //            s.incr_send();
-        //            s.incr_recv();
-        //            let ss = s.clone();
-        //            tx.send(ss).unwrap();
-        //       }
     }
-
+    sr_thread.join().unwrap();
 }
