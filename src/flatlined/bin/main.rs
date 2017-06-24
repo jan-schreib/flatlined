@@ -51,10 +51,7 @@ fn uidcheck() -> () {
     }
 }
 
-fn ipc_handler(
-    statistic: &[Statistic],
-    rx: Receiver<Statistic>,
-) -> () {
+fn ipc_handler(statistic: &[Statistic], rx: Receiver<Statistic>) -> () {
     let mut ipc = IPC::new_bind(FLATSOCK);
     let mut stats = statistic.to_vec();
     let meta = fs::metadata(FLATSOCKPATH).unwrap();
@@ -246,7 +243,7 @@ fn main() {
                 match send.send(s[i].key.clone(), s[i].address.clone(), s[i].port) {
                     Ok(_) => {
                         stats[i].incr_send();
-                    },
+                    }
                     Err(_) => error!("Send error!"),
                 }
             }
