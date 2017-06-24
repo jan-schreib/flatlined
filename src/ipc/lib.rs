@@ -7,6 +7,7 @@ extern crate log;
 use std::str;
 use std::io::{Read, Write};
 use log::LogLevel;
+use std::fs;
 
 pub struct IPC {
     socket: nanomsg::Socket,
@@ -104,7 +105,13 @@ impl IPC {
 
     fn bind_endpoint(sock: &mut nanomsg::Socket, dest: &str) -> nanomsg::Endpoint {
         match sock.bind(dest) {
-            Ok(s) => s,
+            Ok(s) => {
+                match fs::remove_file(dest) {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
+                s
+            }
             Err(err) => panic!("Failed to bind socket: {}", err),
         }
     }
