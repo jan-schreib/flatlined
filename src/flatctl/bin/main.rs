@@ -78,8 +78,8 @@ fn main() {
             ctrl_socket = x;
         }
         None => {
-            ctrl_socket_path = FLATSOCKPATH.to_string();
-            ctrl_socket = FLATSOCK;
+            ctrl_socket_path = FLATSOCK.to_string();
+            ctrl_socket = FLATSOCKPATH;
         }
     }
     let mut ipc: IPC;
