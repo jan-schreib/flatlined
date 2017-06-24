@@ -39,7 +39,6 @@ static DEFAULT_CONF: &'static str = "/etc/flat.conf";
 static PIDFILE: &'static str = "/var/run/flatlined.pid";
 static FLATUSER: &'static str = "_flatlined";
 static FLATGROUP: &'static str = "_flatlined";
-static FLATSOCK: &'static str = "ipc:///var/run/flatlined.sock";
 static FLATSOCKPATH: &'static str = "/var/run/flatlined.sock";
 
 fn uidcheck() -> () {
@@ -51,23 +50,30 @@ fn uidcheck() -> () {
     }
 }
 
-fn ipc_handler(statistic: &[Statistic], rx: Receiver<Statistic>) -> () {
-    let mut ipc = IPC::new_bind(FLATSOCK);
+fn ipc_handler(statistic: &[Statistic], rx: Receiver<Statistic>, flatsock: &str) -> () {
+    let prefix = "ipc://".to_string();
+    let mut ipc = IPC::new_bind(&(prefix + flatsock));
     let mut stats = statistic.to_vec();
-    let meta = fs::metadata(FLATSOCKPATH).unwrap();
+    let meta = fs::metadata(flatsock).unwrap();
     let mut permissions = meta.permissions();
     permissions.set_mode(0o666);
-    fs::set_permissions(FLATSOCKPATH, permissions).unwrap();
+    fs::set_permissions(flatsock, permissions).unwrap();
 
     thread::spawn(move || loop {
         std::thread::sleep(std::time::Duration::from_millis(1000));
 
         match rx.try_iter().last() {
             Some(v) => {
-                for s in &mut stats {
-                    if s.server == v.server {
-                        s.send_beats = v.send_beats;
-                        s.recv_beats = v.recv_beats;
+                if stats.is_empty() {
+                    stats.push(v.clone());
+                }
+                match stats.iter().position(|ref mut x| x.server == v.server) {
+                    Some(x) => {
+                        stats[x].send_beats = v.send_beats;
+                        stats[x].recv_beats = v.recv_beats;
+                    }
+                    None => {
+                        stats.push(v.clone());
                     }
                 }
             }
@@ -91,7 +97,7 @@ fn ipc_handler(statistic: &[Statistic], rx: Receiver<Statistic>) -> () {
                 m.typ = IPCMsgType::Statistic;
                 let mut ret: String = String::with_capacity(1024);
                 if stats.is_empty() {
-                    m.create_payload("Client mode.").unwrap();
+                    m.create_payload("Building statistics...").unwrap();
                 } else {
                     for s in &stats {
                         ret.push_str(&s.to_string());
@@ -104,6 +110,7 @@ fn ipc_handler(statistic: &[Statistic], rx: Receiver<Statistic>) -> () {
                 m.create_payload("Server shutting down").unwrap();
                 ipc.send_msg(m).unwrap();
                 ipc.shutdown();
+                //remove sock file
                 process::exit(0);
             }
             _ => {
@@ -176,6 +183,7 @@ fn main() {
         }
     }
 
+    //become a daemon
     if !matches.is_present("debug") {
         let daemonize = Daemonize::new()
             .pid_file(PIDFILE)
@@ -190,8 +198,13 @@ fn main() {
             Err(e) => error!("{}", e),
         }
     }
-    let (_, rx): (Sender<Statistic>, Receiver<Statistic>) = mpsc::channel();
-    ipc_handler(&stats, rx);
+
+    let (tx, rx): (Sender<Statistic>, Receiver<Statistic>) = mpsc::channel();
+    ipc_handler(
+        &stats,
+        rx,
+        &opts.clone().socket.unwrap_or(FLATSOCKPATH.to_string()),
+    );
 
     //determine mode:
     //server - no servers were defined in the config
@@ -213,6 +226,7 @@ fn main() {
                             ) {
                                 Some(x) => {
                                     stats[x].incr_recv();
+                                    tx.send(stats[x].clone()).unwrap();
                                 }
                                 None => {
                                     stats.push(Statistic {
@@ -223,7 +237,8 @@ fn main() {
                                             port: 0,
                                             key: "".to_string(),
                                         },
-                                    })
+                                    });
+                                    tx.send(stats.last().unwrap().clone()).unwrap()
                                 }
                             };
                         }
@@ -232,7 +247,6 @@ fn main() {
                 }
                 Err(_) => println!("Error!"),
             }
-            //hande stats
         });
     } else {
         let send = BeatSendSocket::new(&opts);
@@ -243,6 +257,7 @@ fn main() {
                 match send.send(s[i].key.clone(), s[i].address.clone(), s[i].port) {
                     Ok(_) => {
                         stats[i].incr_send();
+                        tx.send(stats[i].clone()).unwrap();
                     }
                     Err(_) => error!("Send error!"),
                 }
@@ -250,5 +265,5 @@ fn main() {
         });
 
     }
-    sr_thread.join().unwrap();
+    sr_thread.join().unwrap()
 }
