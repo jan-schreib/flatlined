@@ -58,11 +58,33 @@ fn main() {
                 .help("Valid commands: ok (default), status, statistic, quit, any")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("socket")
+                .short("s")
+                .long("socket")
+                .value_name("SOCKET")
+                .help(
+                    "Path to flatlineds control socket, default: /var/run/flatlined.sock",
+                )
+                .takes_value(true),
+        )
         .get_matches();
 
+    let ctrl_socket_path: String;
+    let ctrl_socket: &str;
+    match matches.value_of("socket") {
+        Some(x) => {
+            ctrl_socket_path = "ipc://".to_string() + x;
+            ctrl_socket = x;
+        }
+        None => {
+            ctrl_socket_path = FLATSOCKPATH.to_string();
+            ctrl_socket = FLATSOCK;
+        }
+    }
     let mut ipc: IPC;
-    match fs::metadata(FLATSOCKPATH) {
-        Ok(_) => ipc = IPC::new_connect(FLATSOCK),
+    match fs::metadata(ctrl_socket) {
+        Ok(_) => ipc = IPC::new_connect(&ctrl_socket_path),
         Err(_) => {
             error!("IPC Socket not found.");
             process::exit(1);
@@ -87,6 +109,7 @@ fn main() {
             com = "ok";
         }
     }
+
 
     let mut msg = IPCMsg {
         typ: msg_type,
