@@ -10,10 +10,10 @@ use server::Server;
 #[derive(Debug, Deserialize, Clone)]
 pub struct FlatConf {
     pub port: u16,
-    logfile: String,
-    socket: String,
+    pub logfile: String,
+    pub socket: Option<String>,
     pub key: String,
-    verbose: bool,
+    pub verbose: bool,
     pub server: Option<Vec<Server>>,
 }
 
@@ -70,7 +70,7 @@ fn parse_test() {
 
     assert_eq!(conf.port, 1337);
     assert_eq!(conf.logfile, "flat.log");
-    assert_eq!(conf.socket, "flat.sock");
+    assert_eq!(conf.socket.unwrap(), "flat.sock");
     assert_eq!(conf.key, "secret");
     assert_eq!(conf.verbose, true);
     assert_eq!(servers.len(), 2);
@@ -95,7 +95,7 @@ fn partial_conf_parse_test() {
 
     assert_eq!(conf.port, 1337);
     assert_eq!(conf.logfile, "flat.log");
-    assert_eq!(conf.socket, "flat.sock");
+    assert_eq!(conf.socket.unwrap(), "flat.sock");
     assert_eq!(conf.key, "secret");
     assert_eq!(conf.verbose, true);
     assert_eq!(conf.server.is_none(), true);
