@@ -10,10 +10,11 @@ pub struct Statistic {
 
 impl fmt::Display for Statistic {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+	try!(fmt.write_str("Tx: "));
         try!(fmt.write_str(&self.send_beats.to_string()));
-        try!(fmt.write_str(" "));
+        try!(fmt.write_str(" Rx: "));
         try!(fmt.write_str(&self.recv_beats.to_string()));
-        try!(fmt.write_str(" "));
+        try!(fmt.write_str(" Host: "));
         try!(fmt.write_str(&self.server.to_string()));
         Ok(())
     }
