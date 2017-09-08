@@ -2,9 +2,11 @@ use std::net::UdpSocket;
 use flatconf::FlatConf;
 use beat::*;
 use log::*;
-use std::str::FromStr;
-use std::net::IpAddr;
 use std::error::Error;
+use std::net::*;
+use std::str::FromStr;
+use trust_dns_resolver::Resolver;
+use trust_dns_resolver::config::*;
 
 pub struct BeatListenSocket {
     socket: UdpSocket,
@@ -60,9 +62,18 @@ impl BeatSendSocket {
         }
     }
 
+    fn get_ip(hostname: &str) -> Result<IpAddr, String> {
+        let mut resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default()).unwrap();
+        let response = resolver.lookup_ip(hostname).unwrap();
+        match response.iter().next() {
+            Some(ip) => return Ok(ip.clone()),
+            _ => return Err(hostname.to_owned()),
+        }
+    }
+
     pub fn send(&self, key: String, addr: String, port: u16) -> BeatSendResult {
         let msg = Beat::new(key.as_str()).into_bytes();
-        match IpAddr::from_str(&addr) {
+        match BeatSendSocket::get_ip(&addr) {
             Ok(ip) => {
                 match self.socket.send_to(&msg, (ip, port)) {
                     Ok(send) => {
@@ -77,7 +88,28 @@ impl BeatSendSocket {
                     }
                 }
             }
-            Err(e) => panic!(e),
+            Err(e) => {
+                panic!(e);
+            }
         }
+    }
+}
+
+#[test]
+#[ignore]
+fn test_get_ip_from_hostname() {
+    let ip = BeatSendSocket::get_ip("www.heise.de").unwrap();
+    if ip.is_ipv4() {
+        assert_eq!(IpAddr::from_str("193.99.144.80").unwrap(), ip);
+    } else {
+        assert_eq!(IpAddr::from_str("2a02:2e0:3fe:1001:7777:772e:2:85").unwrap(), ip);
+    }
+}
+
+#[test]
+fn test_get_ip_from_ip() {
+    match BeatSendSocket::get_ip("193.99.144.80") {
+        Ok(_) => assert!(true),
+        Err(e) => assert_eq!("193.99.144.80", e),
     }
 }

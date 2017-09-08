@@ -16,6 +16,7 @@ nanomsg = "0.6.1"
 blake2-rfc = "0.2.17"
 constant_time_eq = "0.1.2"
 quickcheck = "0.4.1"
+trust-dns-resolver = "0.4.0"
 
 [lib]
 name = "ipc"
