@@ -66,7 +66,8 @@ impl BeatSendSocket {
         #[cfg(target_family="unix")]
         let mut resolver = Resolver::from_system_conf().unwrap();
         #[cfg(target_family="windows")]
-        let mut resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default()).unwrap();
+        let mut resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default())
+            .unwrap();
 
         let response = resolver.lookup_ip(hostname).unwrap();
 
@@ -107,7 +108,10 @@ fn test_get_ip_from_hostname() {
     if ip.is_ipv4() {
         assert_eq!(IpAddr::from_str("193.99.144.80").unwrap(), ip);
     } else {
-        assert_eq!(IpAddr::from_str("2a02:2e0:3fe:1001:7777:772e:2:85").unwrap(), ip);
+        assert_eq!(
+            IpAddr::from_str("2a02:2e0:3fe:1001:7777:772e:2:85").unwrap(),
+            ip
+        );
     }
 }
 
