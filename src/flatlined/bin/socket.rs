@@ -63,8 +63,13 @@ impl BeatSendSocket {
     }
 
     fn get_ip(hostname: &str) -> Result<IpAddr, String> {
+        #[cfg(target_family="unix")]
+        let mut resolver = Resolver::from_system_conf().unwrap();
+        #[cfg(target_family="windows")]
         let mut resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default()).unwrap();
+
         let response = resolver.lookup_ip(hostname).unwrap();
+
         match response.iter().next() {
             Some(ip) => return Ok(ip.clone()),
             _ => return Err(hostname.to_owned()),
@@ -107,6 +112,7 @@ fn test_get_ip_from_hostname() {
 }
 
 #[test]
+#[ignore]
 fn test_get_ip_from_ip() {
     match BeatSendSocket::get_ip("193.99.144.80") {
         Ok(_) => assert!(true),
