@@ -10,10 +10,8 @@ pub struct Server {
 impl fmt::Display for Server {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         try!(fmt.write_str(&self.address));
-        try!(fmt.write_str(" "));
+        try!(fmt.write_str(":"));
         try!(fmt.write_str(&self.port.to_string()));
-        try!(fmt.write_str(" "));
-        try!(fmt.write_str(&self.key));
         Ok(())
     }
 }

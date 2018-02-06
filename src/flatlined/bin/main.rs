@@ -163,8 +163,6 @@ fn main() {
         }
     }
 
-
-
     let (tx, rx): (Sender<Statistic>, Receiver<Statistic>) = mpsc::channel();
     ipc_handler(
         &stats,
@@ -202,10 +200,10 @@ fn main() {
                                         send_beats: 0,
                                         server: Server {
                                             address: ip.to_string(),
-                                            port: 0,
+                                            port: opts.port.clone(),
                                             key: "".to_string(),
                                         },
-                                        timestamp: 0,
+                                        timestamp: beat.timestamp,
                                     });
                                     tx.send(stats.last().unwrap().clone()).unwrap()
                                 }

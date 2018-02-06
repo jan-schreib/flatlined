@@ -22,7 +22,7 @@ impl fmt::Display for Statistic {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs() - self.timestamp > 60 {
-            try!(fmt.write_str(" OFFLINE: "));
+            try!(fmt.write_str(" OFFLINE"));
         } else {
             try!(fmt.write_str(" ONLINE"));
         }
