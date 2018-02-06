@@ -11,7 +11,7 @@ use ipc::*;
 static FLATSOCK: &'static str = "ipc:///var/run/flatlined.sock";
 static FLATSOCKPATH: &'static str = "/var/run/flatlined.sock";
 
-fn communicate(ipc: &mut IPC, msg: IPCMsg) -> () {
+fn communicate(ipc: &mut IPC, msg: IPCMsg) {
 
     ipc.set_send_timeout(2000);
     ipc.set_recv_timeout(2000);
@@ -46,7 +46,7 @@ fn communicate(ipc: &mut IPC, msg: IPCMsg) -> () {
 }
 
 fn main() {
-    env_logger::init().unwrap();
+    env_logger::init();
 
     let matches = App::new("flatctl - the tool for controlling the heartbeat daemon")
         .version("0.1")

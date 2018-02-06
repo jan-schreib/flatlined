@@ -14,8 +14,6 @@ impl fmt::Display for Server {
         try!(fmt.write_str(&self.port.to_string()));
         try!(fmt.write_str(" "));
         try!(fmt.write_str(&self.key));
-        try!(fmt.write_str("\n"));
-
         Ok(())
     }
 }

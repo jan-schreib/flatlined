@@ -8,7 +8,7 @@ use std::str;
 static DEFAULT_MSG: &'static str = "beat";
 
 pub struct Beat {
-    timestamp: u64,
+    pub timestamp: u64,
     hash: [u8; 64],
 }
 

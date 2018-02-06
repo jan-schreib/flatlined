@@ -4,9 +4,7 @@ use beat::*;
 use log::*;
 use std::error::Error;
 use std::net::*;
-use std::str::FromStr;
 use trust_dns_resolver::Resolver;
-use trust_dns_resolver::config::*;
 
 pub struct BeatListenSocket {
     socket: UdpSocket,
@@ -24,7 +22,7 @@ impl BeatListenSocket {
     fn bind(port: u16) -> UdpSocket {
         match UdpSocket::bind(("0.0.0.0", port)) {
             Ok(socket) => {
-                if log_enabled!(LogLevel::Debug) {
+                if log_enabled!(Level::Debug) {
                     debug!("Socket created on 0.0.0.0");
                 }
                 socket
@@ -32,6 +30,7 @@ impl BeatListenSocket {
             Err(socket) => panic!("Couldn't bin to address: {}", socket),
         }
     }
+
     pub fn new(conf: &FlatConf) -> BeatListenSocket {
         BeatListenSocket { socket: BeatListenSocket::bind(conf.port) }
     }
@@ -41,7 +40,7 @@ impl BeatListenSocket {
         match self.socket.recv_from(&mut buf) {
             Ok((count, addr)) => {
                 if count == 72 {
-                    if log_enabled!(LogLevel::Debug) {
+                    if log_enabled!(Level::Debug) {
                         debug!("Beat received.");
                     }
                     Ok((Beat::from_bytes(buf), addr.ip()))
@@ -64,7 +63,7 @@ impl BeatSendSocket {
 
     fn get_ip(hostname: &str) -> Result<IpAddr, String> {
         #[cfg(target_family="unix")]
-        let mut resolver = Resolver::from_system_conf().unwrap();
+        let resolver = Resolver::from_system_conf().unwrap();
         #[cfg(target_family="windows")]
         let mut resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default())
             .unwrap();
@@ -83,7 +82,7 @@ impl BeatSendSocket {
             Ok(ip) => {
                 match self.socket.send_to(&msg, (ip, port)) {
                     Ok(send) => {
-                        if log_enabled!(LogLevel::Debug) {
+                        if log_enabled!(Level::Debug) {
                             debug!("Send {} bytes!", send);
                         }
                         Ok(())
@@ -101,25 +100,30 @@ impl BeatSendSocket {
     }
 }
 
-#[test]
-#[ignore]
-fn test_get_ip_from_hostname() {
-    let ip = BeatSendSocket::get_ip("www.heise.de").unwrap();
-    if ip.is_ipv4() {
-        assert_eq!(IpAddr::from_str("193.99.144.80").unwrap(), ip);
-    } else {
-        assert_eq!(
-            IpAddr::from_str("2a02:2e0:3fe:1001:7777:772e:2:85").unwrap(),
-            ip
-        );
-    }
-}
+mod test {
+    use super::*;
+    use std::str::FromStr;
 
-#[test]
-#[ignore]
-fn test_get_ip_from_ip() {
-    match BeatSendSocket::get_ip("193.99.144.80") {
-        Ok(_) => assert!(true),
-        Err(e) => assert_eq!("193.99.144.80", e),
+    #[test]
+    #[ignore]
+    fn test_get_ip_from_hostname() {
+        let ip = BeatSendSocket::get_ip("www.heise.de").unwrap();
+        if ip.is_ipv4() {
+            assert_eq!(IpAddr::from_str("193.99.144.85").unwrap(), ip);
+        } else {
+            assert_eq!(
+                IpAddr::from_str("2a02:2e0:3fe:1001:7777:772e:2:85").unwrap(),
+                ip
+            );
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn test_get_ip_from_ip() {
+        match BeatSendSocket::get_ip("193.99.144.80") {
+            Ok(_) => assert!(true),
+            Err(e) => assert_eq!("193.99.144.80", e),
+        }
     }
 }

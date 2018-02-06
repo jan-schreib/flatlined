@@ -9,7 +9,6 @@ extern crate blake2_rfc;
 extern crate constant_time_eq;
 extern crate env_logger;
 extern crate nix;
-extern crate daemonizer;
 extern crate clap;
 extern crate ipc;
 
@@ -24,8 +23,6 @@ use socket::{BeatListenSocket, BeatSendSocket};
 use flatconf::FlatConf;
 use stats::Statistic;
 use clap::{Arg, App};
-use daemonizer::Daemonize;
-use nix::unistd;
 use server::Server;
 use std::process;
 use std::thread;
@@ -37,19 +34,8 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
 static DEFAULT_CONF: &'static str = "/etc/flat.conf";
-static PIDFILE: &'static str = "/var/run/flatlined.pid";
-static FLATUSER: &'static str = "_flatlined";
-static FLATGROUP: &'static str = "_flatlined";
 static FLATSOCKPATH: &'static str = "/var/run/flatlined.sock";
 
-fn uidcheck() -> () {
-    if unistd::geteuid() != 0 {
-        error!("Starting this application requires root privileges");
-        process::exit(1);
-    } else {
-        return;
-    }
-}
 
 fn ipc_handler(statistic: &[Statistic], rx: Receiver<Statistic>, flatsock: &str) -> () {
     let prefix = "ipc://".to_string();
@@ -72,6 +58,7 @@ fn ipc_handler(statistic: &[Statistic], rx: Receiver<Statistic>, flatsock: &str)
                     Some(x) => {
                         stats[x].send_beats = v.send_beats;
                         stats[x].recv_beats = v.recv_beats;
+                        stats[x].set_timestamp(v.timestamp);
                     }
                     None => {
                         stats.push(v.clone());
@@ -124,8 +111,7 @@ fn ipc_handler(statistic: &[Statistic], rx: Receiver<Statistic>, flatsock: &str)
 }
 
 fn main() {
-    env_logger::init().unwrap();
-    uidcheck();
+    env_logger::init();
     let sr_thread: JoinHandle<_>;
 
     let matches = App::new("flatlined - a heartbeat daemon")
@@ -137,13 +123,6 @@ fn main() {
                 .value_name("FILE")
                 .help("Sets a custom config file")
                 .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("debug")
-                .short("d")
-                .long("debug")
-                .help("Debug mode, don't detach or become a daemon.")
-                .takes_value(false),
         )
         .get_matches();
 
@@ -184,21 +163,7 @@ fn main() {
         }
     }
 
-    //become a daemon
-    if !matches.is_present("debug") {
-        let daemonize = Daemonize::new()
-            .pid_file(PIDFILE)
-            .chown_pid_file(false)
-            .working_directory("/tmp")
-            .user(FLATUSER)
-            .group(FLATGROUP)
-            .privileged_action(|| "Executed before drop privileges");
 
-        match daemonize.start() {
-            Ok(_) => info!("Success, daemonized"),
-            Err(e) => error!("{}", e),
-        }
-    }
 
     let (tx, rx): (Sender<Statistic>, Receiver<Statistic>) = mpsc::channel();
     ipc_handler(
@@ -216,6 +181,7 @@ fn main() {
 
     if servers.is_empty() {
         let socket = BeatListenSocket::new(&opts);
+
         sr_thread = thread::spawn(move || loop {
             std::thread::sleep(std::time::Duration::from_millis(1000));
             match socket.listen() {
@@ -227,6 +193,7 @@ fn main() {
                             ) {
                                 Some(x) => {
                                     stats[x].incr_recv();
+                                    stats[x].set_timestamp(beat.timestamp);
                                     tx.send(stats[x].clone()).unwrap();
                                 }
                                 None => {
@@ -238,6 +205,7 @@ fn main() {
                                             port: 0,
                                             key: "".to_string(),
                                         },
+                                        timestamp: 0,
                                     });
                                     tx.send(stats.last().unwrap().clone()).unwrap()
                                 }
@@ -250,6 +218,7 @@ fn main() {
             }
         });
     } else {
+
         let send = BeatSendSocket::new(&opts);
 
         sr_thread = thread::spawn(move || loop {
@@ -264,7 +233,6 @@ fn main() {
                 }
             }
         });
-
     }
     sr_thread.join().unwrap()
 }

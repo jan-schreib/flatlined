@@ -6,7 +6,7 @@ extern crate log;
 
 use std::str;
 use std::io::{Read, Write};
-use log::LogLevel;
+use log::Level;
 use std::fs;
 
 pub struct IPC {
@@ -178,7 +178,7 @@ impl IPC {
         };
         match self.socket.read(&mut buffer) {
             Ok(count) => {
-                if log_enabled!(LogLevel::Debug) {
+                if log_enabled!(Level::Debug) {
                     debug!("Read {} bytes!", count);
                 }
                 match buffer[0] {
@@ -205,7 +205,7 @@ impl IPC {
         buffer[1..].clone_from_slice(&msg.msg);
         match self.socket.write(&buffer) {
             Ok(count) => {
-                if log_enabled!(LogLevel::Debug) {
+                if log_enabled!(Level::Debug) {
                     debug!(
                         "Message: {} of size: {} send",
                         std::str::from_utf8(&msg.msg).unwrap(),
