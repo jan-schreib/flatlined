@@ -11,6 +11,7 @@ extern crate env_logger;
 extern crate nix;
 extern crate clap;
 extern crate ipc;
+extern crate core;
 
 mod flatconf;
 mod beat;

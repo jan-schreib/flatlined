@@ -134,6 +134,7 @@ impl Beat {
 mod tests {
     use super::*;
     use beat::quickcheck::quickcheck;
+    use core::u64;
 
     #[test]
     fn new_qc_test() {

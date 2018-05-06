@@ -100,9 +100,10 @@ impl BeatSendSocket {
     }
 }
 
+#[cfg(test)]
 mod test {
-    use super::*;
-    use std::str::FromStr;
+    use super::{BeatSendSocket, IpAddr};
+    use core::str::FromStr;
 
     #[test]
     #[ignore]
