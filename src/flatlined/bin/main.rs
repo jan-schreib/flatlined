@@ -114,6 +114,8 @@ fn ipc_handler(statistic: &[Statistic], rx: Receiver<Statistic>, flatsock: &str)
 fn main() {
     env_logger::init();
     let sr_thread: JoinHandle<_>;
+    let alerts: bool;
+    let mut command: String = "".to_string();
 
     let matches = App::new("flatlined - a heartbeat daemon")
         .version("0.1")
@@ -149,12 +151,21 @@ fn main() {
         }
     }
 
+
+
     let servers: Vec<Server>;
     let nopts = opts.clone();
 
     match nopts.server {
         Some(x) => servers = x.clone(),
         None => servers = Vec::new(),
+    }
+    match nopts.command {
+        Some(c) => {
+            alerts = true;
+            command = c;
+        },
+        None => alerts = false,
     }
 
     let mut stats: Vec<Statistic> = Vec::new();
@@ -180,9 +191,17 @@ fn main() {
 
     if servers.is_empty() {
         let socket = BeatListenSocket::new(&opts);
-
+        let mut offline_servers: Vec<Server> = Vec::new();
         sr_thread = thread::spawn(move || loop {
             std::thread::sleep(std::time::Duration::from_millis(1000));
+
+            match stats.iter().position(
+                |ref mut x| x.is_offline(),
+            ) {
+                Some(x) => offline_servers.push(stats[x].server.clone()),
+                None => (),
+            };
+
             match socket.listen() {
                 Ok((beat, ip)) => {
                     match beat.verify_beat(&opts.key) {
@@ -214,6 +233,11 @@ fn main() {
                     }
                 }
                 Err(_) => println!("Error!"),
+            }
+
+            if !offline_servers.is_empty() && alerts {
+                process::Command::new("sh").arg("-c").arg(&command).spawn()
+                    .expect("failed to start ls");
             }
         });
     } else {
