@@ -52,4 +52,13 @@ impl Statistic {
     pub fn set_timestamp(&mut self, timestamp: u64) {
         self.timestamp = timestamp;
     }
+
+    pub fn is_offline(&self) -> bool {
+        if self.timestamp != 0 && SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
+            .as_secs() - self.timestamp > 60 {
+            true
+        } else {
+            false
+        }
+    }
 }
