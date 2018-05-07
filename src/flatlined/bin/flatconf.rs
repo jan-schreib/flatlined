@@ -15,6 +15,7 @@ pub struct FlatConf {
     pub key: String,
     pub verbose: bool,
     pub server: Option<Vec<Server>>,
+    pub command: Option<String>,
 }
 
 pub type ParsingResult = Result<FlatConf, String>;
@@ -54,7 +55,7 @@ impl FlatConf {
 #[test]
 fn parse_test() {
     let input = "port = 1337 \n logfile = 'flat.log' \n socket = 'flat.sock' \n key = 'secret' \n \
-                 verbose = true \n"
+                 verbose = true \n command = '/foo/bar/alert.sh' \n"
         .to_string();
     let input2 = "[[server]] \n address = '10.0.0.1' \n port = 8888 \n key = 'foo' \n [[server]] \
                   \n address = '10.0.0.2' \n port = 9999 \n key = 'bar' \n";
@@ -73,6 +74,7 @@ fn parse_test() {
     assert_eq!(conf.socket.unwrap(), "flat.sock");
     assert_eq!(conf.key, "secret");
     assert_eq!(conf.verbose, true);
+    assert_eq!(conf.command.unwrap(), "/foo/bar/alert.sh");
     assert_eq!(servers.len(), 2);
     assert_eq!(servers[0].address, "10.0.0.1");
     assert_eq!(servers[0].port, 8888);
